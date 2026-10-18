@@ -36,7 +36,7 @@ On launch the engine SHALL send an initialize request carrying its protocol vers
 - **THEN** the engine stops the plugin and reports the mismatch
 
 ### Requirement: Step execution
-The engine SHALL start a step with a start request carrying the step id, inputs, run context needed by the step, and a unique execution id. The plugin SHALL report completion with the execution id, one declared outcome, and outputs that match the declared output schema.
+The engine SHALL start a step with a start request carrying the step id, the namespace, inputs, run context needed by the step, and a unique execution id. A step MAY be started more than once for the same run when its earlier resolution was never recorded. The plugin SHALL report completion with the execution id, one declared outcome, and outputs that match the declared output schema.
 
 #### Scenario: Step completes
 - **WHEN** a plugin reports completion with a declared outcome and valid outputs
@@ -45,6 +45,17 @@ The engine SHALL start a step with a start request carrying the step id, inputs,
 #### Scenario: Invalid outputs
 - **WHEN** a plugin reports outputs that fail the declared schema
 - **THEN** the engine treats it as a protocol error and moves the run to needs-human
+
+### Requirement: Signals are keyed and retried
+Every message from a plugin that changes a run, such as a step completion, a trigger event, an artifact report, or an attention request, SHALL carry a unique key. The engine SHALL answer it only after it is recorded. A plugin SHALL keep each such message and retry it with the same key until it is confirmed or the plugin exits.
+
+#### Scenario: Completion not recorded
+- **WHEN** a plugin reports completion and the engine answers that it was not recorded
+- **THEN** the plugin keeps the completion and retries it with the same key
+
+#### Scenario: Retry is harmless
+- **WHEN** a plugin repeats a completion whose key was already recorded
+- **THEN** the engine confirms it and the step resolves only once
 
 ### Requirement: Long-running steps
 A step MAY stay pending for any length of time. A plugin MAY send progress messages with a short human-readable status. The engine SHALL surface the latest status to clients and SHALL NOT treat silence as failure unless a timeout is declared.
@@ -85,6 +96,10 @@ The engine MAY expose an HTTP endpoint for webhooks. When it receives a request 
 #### Scenario: Unregistered path
 - **WHEN** a request arrives at a path no plugin registered
 - **THEN** the engine returns not found
+
+#### Scenario: Webhook cannot be recorded
+- **WHEN** the plugin's resulting event cannot be recorded because the store is unreachable
+- **THEN** the engine returns a retryable error so the sender can deliver the request again
 
 ### Requirement: Artifact reporting
 A plugin SHALL be able to report an artifact with a declared kind, a name, and a link or reference at any time while a step is active, and SHALL be able to answer a probe request for an artifact kind it declared probe support for.

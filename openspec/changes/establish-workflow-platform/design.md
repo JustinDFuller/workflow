@@ -38,6 +38,10 @@ Glossary used consistently across the specs:
 - Attention request: a thing the run needs from an operator.
 - Artifact: something a run produces that a person may want to open, such as a pull request.
 - Run context: the trigger payload, inputs, step outputs, and artifacts of a run.
+- Namespace: the scope that owns workflows, runs, and events. Every record belongs to one, and the default is `default`.
+- Store: the place that keeps run records, reached through the store protocol.
+- Signal: a message that changes a run, such as a step outcome, an answer, a trigger event, or an artifact report.
+- Runner: the part that hosts plugin processes and agent sessions on behalf of the engine. In this change it is always in the same process as the engine.
 
 ## Goals / Non-Goals
 
@@ -53,7 +57,8 @@ Glossary used consistently across the specs:
 - Running on edge isolates or inside a browser. The engine needs a real operating system, as the agents it hosts do.
 - Imperative control flow in definitions. Logic belongs in plugin steps.
 - Showing or storing the full transcript of agent output. Clients may reach raw output only by explicit action.
-- Sandboxing plugins. Plugins are trusted executables.
+- Sandboxing plugins. Plugins are trusted executables. A future managed service keeps this true by having each organization run its own runners, so plugins are trusted by the organization that runs them.
+- Running many engine instances, remote runners, or a managed service. This change only specifies the seams that keep those possible, listed in D10.
 
 ## Decisions
 
@@ -114,7 +119,7 @@ Alternatives considered:
 
 ### D6. Run state is an append-only event log
 
-Every state change is recorded as an event before it is acted on, and current state is computed from the log. This makes runs durable across restarts and multi-day review waits, auditable, and simple to stream to clients that reconnect from a sequence number. Storage sits behind an interface: a local embedded database or files first, with other stores possible for pipelines and hosted use.
+Every state change is recorded as an event before it is acted on, and current state is computed from the log. This makes runs durable across restarts and multi-day review waits, auditable, and simple to stream to clients that reconnect from a sequence number. Storage sits behind the store protocol described in D10: a memory store and a local durable store first, with other stores possible for pipelines and hosted use.
 
 The engine alone tracks the current step. This is the reason plugins stay small: a plugin never needs to know where in a workflow it was called.
 
@@ -132,6 +137,56 @@ Plugins are trusted programs. The engine shows the launch command before a plugi
 
 The OpenSpec process is written as a real workflow (see the appendix) and later shipped in the repository. It exercises every core mechanism: agent steps across two harnesses, fresh-context sessions, human gates, waits, bounded loops, an invariant stop, sub-workflows, artifacts, and stacked pull requests. The platform is conformant when that workflow runs end to end with recorded proof.
 
+### D10. Built for one process, safe for many
+
+The default is one executable on one machine. The goal of this decision is that nothing in the first build blocks running the engine as many instances behind a load balancer, or offering it to many organizations later. Several things are free in one process and break across many: the event log, who advances a run, trigger deduplication, timers, "exactly one answer wins", client event streams, and the plugin and agent processes and their working directories on one disk.
+
+```
+  ONE PROCESS (default)                      MANY INSTANCES (future)
+  +--------------------------------+
+  | engine | store  | runner       |         clients --> load balancer
+  |        | (local)| plugins +    |                         |
+  |        |        | agents       |             [engine] [engine] [engine]
+  +--------------------------------+                  |       |       |
+                                                +-----+-------+-------+----+
+                                                |  shared store + feed     |
+                                                +-----+--------------------+
+                                                      |  runners connect
+                                                [runner] [runner] [runner]
+```
+
+The seams that make this possible:
+
+- The store is a protocol, and its central operation is a conditional append: add events to a run only if the run's last sequence number is what the caller expects. If two instances race to advance a run, the second gets a conflict, reloads, and sees the step has moved. The same operation makes "exactly one answer wins" a guarantee and not a lucky outcome.
+- Trigger deduplication is a claim in the store and not a set in memory, so every instance can poll the same service safely.
+- Timeouts are recorded as deadlines in the log and not as timers in memory, so any instance can fire one, and the conditional append means it fires once.
+- Clients watch runs through the store's records, not through the memory of the process that happened to advance them.
+- Resume means taking ownership of a run. A restart is the case where the instance takes back its own runs, and failover is the case where another instance takes them. The same scenarios cover both.
+- Every record carries a namespace from the start, with a single namespace called default. Per-organization authorization is future work, but adding the field to every identifier later would be a data migration.
+- The engine hands steps and sessions to a runner using the plugin protocol messages. The only runner in this change is in the same process, so nothing is serialized over a network, and a later change can add runners on other machines. The split follows the pattern of Temporal workers and CI runners, where the part that decides is separate from the part that does the work.
+
+The store is a protocol and not a compiled-in interface. The built-in memory and local stores implement the same messages inside the binary, so the default stays one executable with nothing to install. Third-party stores are separate processes in any language, shared as a path or a git reference like any plugin. A compiled-in interface would force every community store to be written in Go and merged upstream or built into a custom executable, which is the opposite of how the rest of the platform is extended. Atomicity is not a problem over a protocol, because the whole contract is a few operations that are each atomic alone: append, read, claim, and list, plus optional watch and lease. The engine never needs a transaction across several calls. Latency is not a problem either, because the store sits behind steps that take seconds to days. A store declares whether it is durable, whether it is safe for many instances, and whether it can watch. The engine refuses setups that contradict the declaration.
+
+Failure is handled by one rule instead of a stop mode: a signal is confirmed only after it is recorded, and every sender keeps each signal and retries it with a unique key until it is confirmed.
+
+```
+ sender (runner, plugin, client, webhook)      engine           store
+   |  resolve(step, key=k, outcome=done)         |                |
+   |-------------------------------------------->|  append        |
+   |                                             |--------------->|
+   |                                             |  unreachable   |
+   |  not recorded, retry                        |                |
+   |<--------------------------------------------|                |
+   |  later, same key k                          |                |
+   |-------------------------------------------->|--------------->|  ok
+   |  confirmed                                  |<---------------|
+   |<--------------------------------------------|  start next step
+```
+
+A crashed store adapter is restarted like any plugin, and the senders' retries cover the gap. An unreachable database makes confirmations fail, and runs continue on their own when it returns, with no operator action. An engine instance that dies mid-request looks the same to the sender. The cost is that a step may run more than once, because a sender that dies while holding an unconfirmed signal leaves the step active and the existing re-attach or restart rules apply. The platform therefore promises that a step runs at least once. A local spill journal that replays when the store returns was rejected, because it is a second source of truth that breaks with many instances: by the time the store returns, another instance may own the run and the replayed events would conflict.
+
+Alternative considered: a mode in which the engine stops everything when the store fails. Rejected because it leaves open what happens to the work in flight, such as an agent that just finished or an operator who just answered, and because it makes the store a special case when the retry rule already covers it.
+
 ## Risks / Trade-offs
 
 - **Harness protocol coverage differs by agent** → Start with the generic Agent Client Protocol plugin, check each target harness against it early (task group 7), and add dedicated plugins only for real gaps. Exact adapter commands for each harness are resolved at implementation time.
@@ -139,7 +194,12 @@ The OpenSpec process is written as a real workflow (see the appendix) and later 
 - **A static, expression-free language may feel limiting** → Put logic in plugin steps, make writing one cheap through the shell plugin and a small manifest, and pass values along transitions so branching on data is rarely needed.
 - **Agents may not call the complete tool** → A per-step policy re-prompts, waits for the operator, or resolves with a named outcome, with a bound on re-prompts, after which the run asks for help.
 - **Event log growth** → Events carry state changes and summaries, not agent transcripts, so volume is low. Compaction can be added later since state is derivable.
+- **Seams cost effort now for futures that may never ship** → Keep to the cheap ones (the store protocol, namespaces, recorded deadlines, the runner boundary in one process) and leave fleets, remote runners, and the managed service for later changes.
 - **Plugins are trusted code** → Show the launch command, scope secrets by name, record versions, and defer sandboxing. Third-party plugins should be read before use.
+- **Senders must retry signals with unique keys, which burdens plugin authors** → The response to a JSON-RPC request is already the confirmation, and the SDK handles the retry loop so a small plugin needs no extra code.
+- **Steps run at least once, not exactly once** → Say so in the plugin and harness contracts, key every signal so duplicates are no-ops, and keep steps that must not repeat idempotent on their own side.
+- **A third-party store could corrupt runs** → Ship the conformance suite as a command that tests any store in any language, and make the engine refuse setups that contradict a store's declared capabilities.
+- **While the store is unreachable the engine cannot advance runs** → Signals are held by their senders and recover on their own, clients see engine health and reads marked as possibly out of date, and no run is moved to needs-human because of a store outage.
 - **IR versioning** → Version the IR from the start, reject unknown versions with a clear message, and keep the schema additive within a version.
 - **Polling cost and latency for services like GitHub** → Plugins poll by default so they work anywhere, and accept webhooks through the engine when a public endpoint exists.
 - **Large first release** → The task list orders work so each group is demonstrable alone: the engine runs workflows made of shell steps before any agent or service plugin exists.

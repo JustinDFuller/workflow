@@ -28,6 +28,10 @@ The engine SHALL create a run when a trigger fires or when a client starts one. 
 - **WHEN** a trigger reports an event whose dedupe key matches a run already created
 - **THEN** the engine does not create another run
 
+#### Scenario: Duplicate across instances
+- **WHEN** two engine instances sharing a store receive the same trigger event at once
+- **THEN** the store's claim of the dedupe key lets exactly one of them create the run
+
 ### Requirement: Run states
 A run SHALL always be in exactly one state: running, waiting, needs-attention, succeeded, failed, or cancelled. Succeeded, failed, and cancelled SHALL be final.
 
@@ -51,7 +55,11 @@ The engine SHALL start a step by calling its plugin and SHALL treat the step as 
 - **THEN** the engine treats it as a protocol error and moves the run to needs-human
 
 ### Requirement: Step timeouts
-A step MAY declare a timeout. When it elapses before the step resolves, the engine SHALL cancel the step and resolve it with the outcome timed_out.
+A step MAY declare a timeout. The engine SHALL record the deadline as an event when the step starts. When the deadline passes before the step resolves, the engine SHALL cancel the step and resolve it with the outcome timed_out, exactly once.
+
+#### Scenario: Deadline survives a restart
+- **WHEN** the engine restarts while a step with a timeout is active and the deadline passes
+- **THEN** the step is resolved with timed_out once, and not restarted with a fresh timeout
 
 #### Scenario: Timeout routes
 - **WHEN** a step with a timeout does not resolve in time and the workflow routes timed_out
@@ -110,18 +118,22 @@ The engine SHALL keep a registry of the artifacts of each run. Each entry SHALL 
 - **THEN** the engine asks the plugin to check for it when the producing step resolves and updates the entry from the answer
 
 ### Requirement: Durable event log
-The engine SHALL record every state change of a run as an append-only event before acting on it, including run start, step entry, step resolution, attention requested and answered, artifact changes, and run end. Current state SHALL be derivable from the log alone.
+The engine SHALL record every state change of a run in the store as an append-only event before acting on it, using the store's conditional append, including run start, step entry, step resolution, attention requested and answered, artifact changes, and run end. Current state SHALL be derivable from the log alone.
 
 #### Scenario: Rebuild from the log
-- **WHEN** the engine restarts
+- **WHEN** the engine restarts with a durable store
 - **THEN** it rebuilds the state of every run from its events and the state matches the state before the restart
 
 #### Scenario: Events are ordered
 - **WHEN** a client reads a run's events
 - **THEN** they are returned in the order recorded with a sequence number that never repeats
 
-### Requirement: Resume after restart
-After a restart the engine SHALL resume every non-final run. Steps that were active SHALL be restarted or re-attached according to what their plugin declares it supports.
+#### Scenario: Append conflict
+- **WHEN** the store reports a conflict because another instance advanced the run first
+- **THEN** the engine reloads the run from the log and does not act on its stale view
+
+### Requirement: Resume on taking ownership
+When an engine instance starts or takes over a run, it SHALL resume every non-final run it owns. Steps that were active SHALL be restarted or re-attached according to what their plugin declares it supports. A restart and a takeover by another instance SHALL follow the same rules.
 
 #### Scenario: Resumable wait
 - **WHEN** the engine restarts while a run waits for a review and the plugin supports re-attachment
@@ -130,6 +142,61 @@ After a restart the engine SHALL resume every non-final run. Steps that were act
 #### Scenario: Non-resumable step
 - **WHEN** the engine restarts during a step whose plugin does not support re-attachment
 - **THEN** the engine restarts that step and records that it was restarted
+
+#### Scenario: Takeover by another instance
+- **WHEN** an instance that owned a run is gone and another instance sharing the store takes the run
+- **THEN** the new instance resumes it by the same rules as a restart
+
+### Requirement: Signals are confirmed after recording
+The engine SHALL confirm a signal to its sender only after the signal is recorded. Signals include a step outcome, an attention answer, a trigger event, an artifact report, and a client control. Each signal SHALL carry a unique key, and a repeated key SHALL have no further effect.
+
+#### Scenario: Store unreachable
+- **WHEN** a plugin reports a step outcome and the store cannot be reached
+- **THEN** the engine tells the sender the signal was not recorded and does not start the next step
+
+#### Scenario: Retry after recovery
+- **WHEN** the sender retries the same signal after the store returns
+- **THEN** the engine records it once and confirms it
+
+#### Scenario: Duplicate key
+- **WHEN** a sender repeats a signal whose key is already recorded
+- **THEN** the engine confirms it again and records nothing new
+
+### Requirement: Steps run at least once
+The engine SHALL guarantee that a step whose resolution was never recorded is eventually resolved, and SHALL NOT guarantee that it runs only once. A step restarted for this reason SHALL be recorded as restarted.
+
+#### Scenario: Sender dies holding a signal
+- **WHEN** a plugin dies after completing work and before its outcome was confirmed
+- **THEN** the step is still active in the log and is restarted or re-attached by the resume rules
+
+### Requirement: Namespaces
+Every workflow, run, event, attention request, and artifact SHALL belong to a namespace. A namespace called default SHALL be used when none is given, and runs in different namespaces SHALL NOT see each other's state.
+
+#### Scenario: Default namespace
+- **WHEN** a run is started with no namespace
+- **THEN** it belongs to the namespace default
+
+#### Scenario: Isolation
+- **WHEN** a client lists runs in one namespace
+- **THEN** no run from another namespace is returned
+
+### Requirement: Steps are dispatched to a runner
+The engine SHALL hand each step and agent session to a runner using the plugin protocol messages, and a step that uses a session SHALL return to the runner that hosts it. In this change the only runner SHALL be in the same process as the engine.
+
+#### Scenario: In-process runner
+- **WHEN** the engine starts a plugin step
+- **THEN** the runner in the same process launches the plugin and exchanges the protocol messages
+
+#### Scenario: Runner is gone
+- **WHEN** the runner hosting a step is no longer available
+- **THEN** the engine applies the re-attach or restart rules for that step
+
+### Requirement: Engine health
+The engine SHALL track its own health, including whether the store is reachable and since when, and SHALL expose it to clients.
+
+#### Scenario: Store becomes unreachable
+- **WHEN** the engine cannot reach the store
+- **THEN** its health reports the store unreachable and the time it was first noticed
 
 ### Requirement: Cancel and retry
 A client SHALL be able to cancel a run and to retry a failed or needs-attention run. Cancelling SHALL cancel the active step and end any agent sessions. Retrying SHALL re-run the step that routed to failure or needs-human.

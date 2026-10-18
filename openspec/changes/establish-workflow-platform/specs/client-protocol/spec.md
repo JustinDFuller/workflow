@@ -32,6 +32,13 @@ The engine SHALL listen only on the loopback interface by default. When configur
 - **WHEN** a client presents an invalid token on a non-loopback bind
 - **THEN** the connection is rejected
 
+### Requirement: Namespaces
+Every client method and subscription SHALL take a namespace and SHALL use the namespace default when none is given.
+
+#### Scenario: No namespace given
+- **WHEN** a client lists runs without naming a namespace
+- **THEN** it receives the runs of the namespace default
+
 ### Requirement: Workflow discovery
 A client SHALL be able to list workflows and fetch a workflow's graph, including steps, transitions, sessions, and expected artifacts.
 
@@ -57,6 +64,10 @@ A client SHALL be able to subscribe to the events of one run or of all runs and 
 - **WHEN** a client reconnects and asks to resume from a sequence number
 - **THEN** it receives every event after that number
 
+#### Scenario: Run advanced elsewhere
+- **WHEN** a run is advanced by a different engine instance than the one the client is connected to
+- **THEN** the client still receives the events, because they are served from the recorded log
+
 ### Requirement: Starting and controlling runs
 A client SHALL be able to start a run of a workflow with inputs, cancel a run, and retry a run.
 
@@ -67,6 +78,20 @@ A client SHALL be able to start a run of a workflow with inputs, cancel a run, a
 #### Scenario: Invalid inputs
 - **WHEN** a client starts a workflow with inputs that fail the workflow's input schema
 - **THEN** the engine rejects the request with the validation errors
+
+### Requirement: Recorded before confirmed
+The engine SHALL confirm an answer or a control request from a client only after it is recorded. When it cannot be recorded, the engine SHALL answer that it was not recorded so the client can keep it and retry.
+
+#### Scenario: Answer not recorded
+- **WHEN** a client answers a request and the store is unreachable
+- **THEN** the engine tells the client the answer was not recorded and the request stays open
+
+### Requirement: Engine health
+A client SHALL be able to read and subscribe to the engine's health. When the store is unreachable, reads the engine serves SHALL be marked as possibly out of date.
+
+#### Scenario: Store unreachable
+- **WHEN** the engine cannot reach the store
+- **THEN** subscribed clients receive an unhealthy event with the time it began, and later reads are marked possibly out of date
 
 ### Requirement: Answering attention
 A client SHALL be able to answer an attention request with a choice or free text, and an answer from any client SHALL close the request for all clients.

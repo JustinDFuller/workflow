@@ -84,3 +84,32 @@ The CLI SHALL read configuration from a documented file and SHALL keep its state
 #### Scenario: Custom state directory
 - **WHEN** an operator sets the state directory
 - **THEN** the event log and installed plugins are kept there
+
+### Requirement: Store configuration
+The configuration file SHALL select the store and MAY name a third-party store by path or git reference. The serve command and the client launchers that start an embedded engine SHALL use the local durable store by default, and the run command with no server SHALL use the memory store by default.
+
+#### Scenario: Default store for serve
+- **WHEN** an operator runs the serve command with no store configured
+- **THEN** the engine uses the local durable store
+
+#### Scenario: Third-party store
+- **WHEN** the configuration names a third-party store
+- **THEN** the engine resolves it like a plugin and shows its launch command on first use
+
+### Requirement: Store conformance command
+The CLI SHALL provide a command that runs the conformance suite against the configured store, or against a store named on the command line, and exits with a status that reflects the result.
+
+#### Scenario: Conformant store
+- **WHEN** an operator runs the command against a store that passes every check for its capabilities
+- **THEN** the command prints the results and exits successfully
+
+#### Scenario: Failing store
+- **WHEN** a check fails
+- **THEN** the command names the failing check and exits with a failure status
+
+### Requirement: Namespace option
+The run, status, and serve commands SHALL accept a namespace and SHALL use default when none is given.
+
+#### Scenario: Status in a namespace
+- **WHEN** an operator runs the status command with a namespace
+- **THEN** only the runs of that namespace are printed

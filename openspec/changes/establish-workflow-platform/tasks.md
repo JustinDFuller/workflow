@@ -3,7 +3,7 @@
 - [ ] 1.1 Create the Go module, the directory layout for the engine, the executable, built-in plugins, and clients, and a build that produces one executable
 - [ ] 1.2 Add lint, formatting, and a check that bans code comments
 - [ ] 1.3 Add the check that bans fixed-width prose, and the OpenSpec validation check, to CI as required checks
-- [ ] 1.4 Publish the JSON Schemas for the IR, the plugin protocol, the harness protocol, and the client protocol, and generate Go and TypeScript types from them
+- [ ] 1.4 Publish the JSON Schemas for the IR, the plugin protocol, the harness protocol, the client protocol, and the store protocol, and generate Go and TypeScript types from them
 - [ ] 1.5 Add a test that fails when generated types differ from the schemas
 - [ ] 1.6 Write a short contributor guide that points at the specs and the design
 - [ ] 1.7 Manual proof: a pull request showing every check running and failing on a deliberate violation, then passing
@@ -21,33 +21,43 @@
 - [ ] 2.9 Test every scenario in the specification with fixture workflows, including every rejection
 - [ ] 2.10 Manual proof: validate a good and a bad workflow from the command line and show the messages
 
-## 3. Run engine (run-engine)
+## 3. Run engine and store (run-engine, run-store)
 
-- [ ] 3.1 Implement the event types, the append-only log behind a store interface, and a local store
-- [ ] 3.2 Implement state derivation from the log and resume after restart
-- [ ] 3.3 Implement run creation from triggers and clients, with dedupe keys
-- [ ] 3.4 Implement step dispatch, outcome routing, default routes, and route values
-- [ ] 3.5 Implement loop accounting and the needs-human stop on a bound
-- [ ] 3.6 Implement timeouts that resolve with the timed_out outcome
-- [ ] 3.7 Implement attention requests, human gates, and answers
-- [ ] 3.8 Implement the artifact registry with expected, available, and probed states
-- [ ] 3.9 Implement cancel, retry, and concurrent runs
-- [ ] 3.10 Implement sub-workflow execution and the nested step detail
-- [ ] 3.11 Implement the run summary that answers the three questions
-- [ ] 3.12 Test the engine with an in-process fake plugin: every scenario in the specification, plus a crash and resume in the middle of a wait
-- [ ] 3.13 Manual proof: run a small workflow built from fake steps, stop the engine during a wait, restart it, and show the run continuing
+- [ ] 3.1 Implement the event types and the engine side of the store protocol: conditional append with conflict handling, read, dedupe claim, and list
+- [ ] 3.2 Implement the built-in memory store and local durable store using the same store messages, with declared capabilities
+- [ ] 3.3 Implement state derivation from the log and resume on taking ownership, reloading after an append conflict
+- [ ] 3.4 Implement run creation from triggers and clients, with dedupe through the store's claim
+- [ ] 3.5 Implement step dispatch, outcome routing, default routes, and route values
+- [ ] 3.6 Implement loop accounting and the needs-human stop on a bound
+- [ ] 3.7 Implement timeouts as recorded deadlines that resolve with the timed_out outcome exactly once, including across a restart
+- [ ] 3.8 Implement attention requests, human gates, and answers
+- [ ] 3.9 Implement the artifact registry with expected, available, and probed states
+- [ ] 3.10 Implement cancel, retry, and concurrent runs
+- [ ] 3.11 Implement sub-workflow execution and the nested step detail
+- [ ] 3.12 Implement the run summary that answers the three questions
+- [ ] 3.13 Implement signal confirmation after recording, with unique keys and no effect for a repeated key
+- [ ] 3.14 Implement namespaces on every record, with default as the namespace when none is given
+- [ ] 3.15 Implement the runner boundary with the in-process runner, and the re-attach or restart rules when a runner is gone
+- [ ] 3.16 Implement engine health, store restart limits, and the rule that a store failure never moves a run to needs-human
+- [ ] 3.17 Implement store capability checks that refuse unsafe setups, and the resolution of third-party stores like plugins
+- [ ] 3.18 Implement the conformance suite and run it against both built-in stores
+- [ ] 3.19 Write a minimal third-party store in a language other than Go that passes the conformance suite
+- [ ] 3.20 Test the engine with an in-process fake plugin: every scenario in the specification, plus a crash and resume in the middle of a wait, two engine instances racing on a shared store, and a store that fails and recovers
+- [ ] 3.21 Manual proof: run a small workflow built from fake steps, stop the engine during a wait, restart it, and show the run continuing
+- [ ] 3.22 Manual proof: kill the store adapter during a run and show it recover, then make the store unreachable while a step completes and show the run continue on its own once the store returns, with the unhealthy state shown in a client
 
 ## 4. Plugin host (plugin-protocol)
 
 - [ ] 4.1 Implement the manifest format and its schema
 - [ ] 4.2 Implement the process host: launch, handshake, capability check, shutdown
 - [ ] 4.3 Implement step execution, progress, long-running steps, and cancellation
-- [ ] 4.4 Implement trigger subscription and events, and webhook delivery through the engine
+- [ ] 4.4 Implement trigger subscription and events, and webhook delivery through the engine, with a retryable error when an event cannot be recorded
 - [ ] 4.5 Implement artifact reporting, probing, attention from plugins, and logging
-- [ ] 4.6 Implement crash handling and restart behavior
-- [ ] 4.7 Implement plugin resolution from a local path and a git reference, the launch command confirmation, and recording the version used by each run
-- [ ] 4.8 Write a minimal example plugin in a language other than Go that passes the protocol tests
-- [ ] 4.9 Manual proof: install the example plugin from a git reference and run a workflow that uses it
+- [ ] 4.6 Implement keyed signals and the retry loop in the SDK helpers, so a plugin holds a signal until it is confirmed
+- [ ] 4.7 Implement crash handling and restart behavior
+- [ ] 4.8 Implement plugin resolution from a local path and a git reference, the launch command confirmation, and recording the version used by each run
+- [ ] 4.9 Write a minimal example plugin in a language other than Go that passes the protocol tests
+- [ ] 4.10 Manual proof: install the example plugin from a git reference and run a workflow that uses it
 
 ## 5. Client protocol server and command line (client-protocol, workflow-cli)
 
@@ -57,9 +67,10 @@
 - [ ] 5.4 Implement protocol versioning
 - [ ] 5.5 Implement the serve, run, validate, status, plugin, and export commands with the documented exit codes
 - [ ] 5.6 Implement the client launcher commands
-- [ ] 5.7 Implement config and state location handling
-- [ ] 5.8 Test every scenario with a scripted client
-- [ ] 5.9 Manual proof: drive a run with a scripted client over both transports and show the event stream and an answered attention request
+- [ ] 5.7 Implement config and state location handling, store selection, the namespace option, and the store conformance command
+- [ ] 5.8 Implement namespaces and engine health in the client protocol, and the not-recorded answer for answers and controls
+- [ ] 5.9 Test every scenario with a scripted client
+- [ ] 5.10 Manual proof: drive a run with a scripted client over both transports and show the event stream and an answered attention request
 
 ## 6. Shell plugin (plugin-shell)
 
@@ -73,7 +84,7 @@
 ## 7. Harness contract and generic agent plugin (harness-protocol, plugin-harness-acp)
 
 - [ ] 7.1 Implement the session lifecycle, the headless requirement, the interactive capability declaration, and validation of declared modes
-- [ ] 7.2 Implement the injected tool server with the complete, ask, and artifact tools, including the summary output and undeclared outcome error
+- [ ] 7.2 Implement the injected tool server with the complete, ask, and artifact tools, including the summary output, undeclared outcome error, and holding an unconfirmed outcome for retry
 - [ ] 7.3 Implement prompt construction with prefixes and outcome instructions
 - [ ] 7.4 Implement the turn-end policies and the re-prompt limit
 - [ ] 7.5 Implement session continuity, fresh sessions, and mixed harnesses in one run

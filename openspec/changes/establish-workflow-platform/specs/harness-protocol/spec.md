@@ -76,6 +76,10 @@ The engine SHALL make three tools available to every session: one to complete th
 - **WHEN** the agent calls the artifact tool with a kind, name, and link
 - **THEN** the engine adds it to the run's registry
 
+#### Scenario: Completion not yet recorded
+- **WHEN** the agent calls the complete tool and the engine cannot yet record the outcome
+- **THEN** the harness plugin holds the outcome and retries it with the same key, and the step stays active until it is confirmed
+
 ### Requirement: Step prompt construction
 An agent step SHALL declare a prompt and MAY declare a command prefix, such as a skill or slash command, to be placed before the prompt. The engine SHALL append instructions that name the outcomes the step allows and tell the agent to report the result with the complete tool.
 
