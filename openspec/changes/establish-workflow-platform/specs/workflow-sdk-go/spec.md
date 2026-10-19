@@ -7,7 +7,7 @@ Lets people write workflow definitions as Go programs for generation and reuse, 
 ## ADDED Requirements
 
 ### Requirement: Builder emits IR
-The Go SDK SHALL provide a builder for sessions, steps, outcomes, and transitions whose output is the same IR the YAML format produces. It SHALL NOT run workflow logic at execution time.
+The Go SDK SHALL provide a builder for profiles, steps, wait steps and their triggers, outputs, context lists, outcomes, defaults, and transitions whose output is the same IR the YAML format produces. It SHALL NOT run workflow logic at execution time.
 
 #### Scenario: Builder output
 - **WHEN** a program builds a workflow and asks for its IR

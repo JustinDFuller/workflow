@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides the simplest useful plugin: run a command and turn its result into an outcome. It lets workflows call any CLI, serves as the reference plugin for the protocol, and lets the engine be tested without any agent or service.
+Provides the simplest useful plugin: run a command and turn its result into an outcome, and check a command's result as a trigger. It lets workflows call any CLI, serves as the reference plugin for the protocol, and lets the engine be tested without any agent or service.
 
 ## ADDED Requirements
 
@@ -46,9 +46,17 @@ The step SHALL run the command as an argument list without a shell unless the wo
 - **WHEN** an argument contains spaces or shell metacharacters
 - **THEN** it is passed to the command unchanged
 
-### Requirement: Polling wait
-The plugin SHALL provide a wait step that re-runs a command at an interval until its result maps to an outcome other than a declared keep-waiting outcome.
+### Requirement: Polling trigger
+The plugin SHALL provide a trigger for wait steps that re-runs a command at an interval and resolves the wait when the command's result maps to an outcome other than a declared keep-waiting outcome. The trigger SHALL offer check-now by running the command once, and its correlation key SHALL identify the run and the step.
 
 #### Scenario: Wait until ready
 - **WHEN** the command reports keep-waiting twice and then ready
-- **THEN** the step stays active and then resolves with ready
+- **THEN** the wait step resolves with ready on the third run of the command
+
+#### Scenario: Already ready
+- **WHEN** the command reports ready the first time it is run at check-now
+- **THEN** the wait step resolves without waiting for the interval
+
+#### Scenario: Polling holds no step
+- **WHEN** the trigger is polling
+- **THEN** no step is active for the run and the run is waiting

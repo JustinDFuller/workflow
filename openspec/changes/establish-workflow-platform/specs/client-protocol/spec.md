@@ -40,11 +40,15 @@ Every client method and subscription SHALL take a namespace and SHALL use the na
 - **THEN** it receives the runs of the namespace default
 
 ### Requirement: Workflow discovery
-A client SHALL be able to list workflows and fetch a workflow's graph, including steps, transitions, sessions, and expected artifacts.
+A client SHALL be able to list the cataloged workflows and fetch a workflow's graph, including steps, wait steps and their triggers, transitions, profiles, steps that rely on the core ask route, and expected artifacts. A client SHALL be able to add, replace, and remove cataloged workflows.
 
 #### Scenario: Graph fetch
 - **WHEN** a client requests a workflow
 - **THEN** it receives the full graph
+
+#### Scenario: Catalog change
+- **WHEN** a client adds a valid workflow
+- **THEN** other connected clients are told the catalog changed
 
 ### Requirement: Run listing and detail
 A client SHALL be able to list runs, filtered by workflow and state, and to fetch a run. A run summary SHALL include the current step, the run state, the open attention requests, and the artifacts, so a client can answer the three at-a-glance questions without reading anything else.
@@ -94,7 +98,7 @@ A client SHALL be able to read and subscribe to the engine's health. When the st
 - **THEN** subscribed clients receive an unhealthy event with the time it began, and later reads are marked possibly out of date
 
 ### Requirement: Answering attention
-A client SHALL be able to answer an attention request with a choice or free text, and an answer from any client SHALL close the request for all clients.
+A client SHALL be able to answer an attention request with a choice or free text, answering each question of a request that holds several, and an answer from any client or attention channel SHALL close the request for all clients.
 
 #### Scenario: Two clients
 - **WHEN** two clients show the same open request and one answers it
@@ -104,16 +108,33 @@ A client SHALL be able to answer an attention request with a choice or free text
 - **WHEN** two clients answer the same request at once
 - **THEN** exactly one answer is accepted and the other receives the request's answered state
 
-### Requirement: Interactive session attach
-For interactive sessions, a client SHALL be able to attach to the session's terminal, receive output, send input, and resize it. Multiple clients MAY attach at once.
+### Requirement: Questions with draft work
+An attention request opened by a step that exited with questions SHALL carry each question, the outputs, notes, and summary the step recorded, and the step's iteration count, so a client can show the draft beside the questions.
 
-#### Scenario: Attach to terminal
-- **WHEN** a client attaches to an interactive session
-- **THEN** it receives the current screen and subsequent output
+#### Scenario: Draft included
+- **WHEN** a client fetches a request opened from an exit with questions
+- **THEN** it receives the questions and the draft outputs of that attempt
 
-#### Scenario: Headless session
-- **WHEN** a client attaches to a headless session
-- **THEN** the engine returns an error that the session has no terminal
+### Requirement: Waiting detail
+A run summary of a waiting run SHALL include the wait step, each trigger it waits on with a human-readable description, and when the wait began.
+
+#### Scenario: Wait described
+- **WHEN** a client lists runs and one is waiting on a review
+- **THEN** its summary describes the review and the pull request and when the wait began
+
+### Requirement: Step prompt retrieval
+A client SHALL be able to fetch the assembled text an agent step received, including its context sections, and the outputs it reported, for any attempt of any step.
+
+#### Scenario: Prompt fetch
+- **WHEN** a client requests the prompt of a step attempt
+- **THEN** it receives the text the agent received
+
+### Requirement: Interactive agent launch details
+For an agent step on an interactive profile, the engine SHALL expose to clients how to reach the externally hosted agent. The engine SHALL NOT provide terminal attachment.
+
+#### Scenario: Launch details
+- **WHEN** an agent step has launched an interactive agent
+- **THEN** a client can read how to reach the host, and no terminal method exists
 
 ### Requirement: Client identity
 Each connected client SHALL identify itself with a name and kind. The engine SHALL record the client in the events for answers and controls it performs.

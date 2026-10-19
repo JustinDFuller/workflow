@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the protocol between the engine and the place that keeps run records, so that the default store is simple, a durable or shared store can be swapped in by anyone in any language, and the engine behaves the same with one instance or many.
+Defines the protocol between the engine and the place that keeps run records, wait subscriptions, and definitions, so that the default store is simple, a durable or shared store can be swapped in by anyone in any language, and the engine behaves the same with one instance or many.
 
 ## ADDED Requirements
 
@@ -53,6 +53,40 @@ The store SHALL list the run summaries of a namespace, filtered by workflow and 
 - **WHEN** the engine lists the runs of a namespace in the state waiting
 - **THEN** the store returns only the matching runs of that namespace
 
+### Requirement: Wait subscriptions
+The store SHALL keep subscription records that tie a correlation key in a namespace to a run and a wait step, and SHALL support registering a subscription, removing it, and finding the subscriptions for a correlation key. A subscription MAY carry a deadline, and the store SHALL support listing the subscriptions whose deadline has passed.
+
+#### Scenario: Register and find
+- **WHEN** the engine registers a subscription for a key and later finds subscriptions for that key
+- **THEN** the store returns the run and step
+
+#### Scenario: Remove
+- **WHEN** the engine removes a subscription
+- **THEN** finding that key no longer returns it
+
+#### Scenario: Several runs on one key
+- **WHEN** two runs register subscriptions for the same key
+- **THEN** finding the key returns both
+
+#### Scenario: Namespaces are separate
+- **WHEN** a subscription is registered in one namespace
+- **THEN** finding the same key in another namespace returns nothing
+
+#### Scenario: Expired deadlines
+- **WHEN** a subscription's deadline has passed
+- **THEN** listing expired subscriptions returns it
+
+### Requirement: Definition storage
+The store SHALL keep workflow definitions by digest and the catalog of each namespace, and SHALL return a definition by its digest for as long as any run that pinned it is not final.
+
+#### Scenario: Read by digest
+- **WHEN** the engine asks for a definition by digest
+- **THEN** the store returns the IR it was given
+
+#### Scenario: Pinned definition kept
+- **WHEN** a workflow is replaced in the catalog and an earlier run of it is still waiting
+- **THEN** the store still returns the earlier definition by its digest
+
 ### Requirement: Optional watching
 A store MAY support watching a namespace from a cursor and delivering new records as they are written. When a store does not, the engine SHALL poll it.
 
@@ -97,6 +131,10 @@ The engine SHALL include a memory store that keeps nothing after the process end
 - **WHEN** an operator runs a workflow with no server and no store configured
 - **THEN** the run uses the memory store
 
+#### Scenario: One-off run that waits
+- **WHEN** a one-off run reaches a wait step while using the memory store
+- **THEN** the command reports that the run cannot be resumed after it exits and asks for a durable store
+
 ### Requirement: Third-party stores
 A store written by anyone SHALL run as a separate process that the engine launches and talks to using JSON-RPC 2.0 over standard input and output, and SHALL be resolved from a local path or a git reference in the same way as a plugin.
 
@@ -127,7 +165,7 @@ When a store adapter process exits unexpectedly, the engine SHALL restart it up 
 - **THEN** the engine confirms no signals, reports itself unhealthy, and continues the runs on its own when the store returns
 
 ### Requirement: Conformance suite
-The platform SHALL provide a conformance suite that runs against any store, built in or third party, through the store protocol alone. A store SHALL be considered conformant only when it passes the checks for every capability it declares.
+The platform SHALL provide a conformance suite that runs against any store, built in or third party, through the store protocol alone. A store SHALL be considered conformant only when it passes the checks for every capability it declares, including wait subscriptions and definition storage.
 
 #### Scenario: Passing store
 - **WHEN** the suite runs against a store that follows the protocol
@@ -135,4 +173,8 @@ The platform SHALL provide a conformance suite that runs against any store, buil
 
 #### Scenario: Broken append
 - **WHEN** the suite runs against a store whose conditional append accepts two appends at the same expected sequence number
+- **THEN** the suite fails and names the check
+
+#### Scenario: Broken subscription lookup
+- **WHEN** the suite runs against a store whose lookup misses a registered key
 - **THEN** the suite fails and names the check
