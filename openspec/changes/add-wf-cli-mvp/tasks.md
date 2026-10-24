@@ -76,7 +76,7 @@
 - [x] 7.5 Implement the status line command and verify the running and needs-you scenarios
 - [x] 7.6 Implement the install command for Claude Code that merges hooks, status line, permission, and the start slash command into the local settings, and verify the first, second, and existing-settings scenarios
 - [x] 7.7 Document what the hooks prevent and do not, in the install output and the contributor guide, and verify the install output states it
-- [ ] 7.8 Manual proof: record a real Claude Code session where the stop hook blocks an early stop, the tool hook denies a call, and the status line changes with the step
+- [x] 7.8 Manual proof: record a real Claude Code session where the stop hook blocks an early stop, the tool hook denies a call, and the status line changes with the step
 
 ## 8. OpenSpec workflow, stage one (wf-openspec-change-workflow)
 
