@@ -308,3 +308,63 @@ GitHub did not allow or could not finish 'gh pr view ...': HTTP 403: Resource no
 The first is a CI that turned red after the approval and stopped the run at `invariants`. The second is a pull request closed without merging. The third and fourth are a denied GitHub call, which leaves the run in the broken state with the status line `openspec-change > proposal_review (1/10) . broken . NEEDS YOU`.
 
 Findings from this part. The closed outcome stops the run, but the stop reason names the step and not the closed pull request, because the engine writes that reason. A reviewer who wants the cause in the stop message needs a spec change to routing. Also, `wf statusline` waits for its input to close, so it must be run with its input closed when tried by hand.
+
+## Stage two of the OpenSpec workflow
+
+The workflow file now runs from the proposal to the archive pull request. The new check scripts are `tasks-complete.sh`, `verdict.sh`, `implementation-pr.sh`, `implementation-review.sh`, `archived.sh`, `archive-pr.sh`, and `implementation-ready.sh`, and the three prompts for the headless agent are in `workflows/openspec-change/prompts/`. Go tests run every script against a scratch git repository with a stand-in `gh` and a stand-in `claude`, and one test runs the real verify check through the engine to show that the headless agent runs once for a commit, runs again for a new commit, and is not cached when it is broken.
+
+A run in a scratch repository, driven only by `wf next`, with the stand-in `gh` and `claude`, went through the whole workflow on the real workflow file. The tasks-remain case first:
+
+```
+Not done yet: 2 tasks remain in openspec/changes/add-thing/tasks.md; the next is: 1.1 Build the first part
+```
+
+With the work pushed and a draft implementation pull request stacked on the proposal, the verify check ran the headless agent, which failed with findings. The findings reached the step as the reason it was not done, the next command says to run it in the background because the step is slow, and a second `wf next` on the same commit did not run the agent again:
+
+```
+Step: verify (visit 1 of 10)
+State: work
+Not done yet: the verify check failed at 4fc197e:
+- cmd/wf/main.go: the start command ignores --run
+Next: run this in the background: wf next
+```
+
+After a fix, verify passed and the adversarial review failed with its own findings. After another fix, review passed and the scope check found an added command, and the run stopped:
+
+```
+State: stopped
+The run stopped at step scope and cannot continue.
+Reason: the scope check failed at cff8ea9:
+- cmd/wf/extra.go: adds a command nobody approved
+```
+
+A new run with the scope problem fixed went through apply, verify, review, scope, and the implementation pull request, and waited at the implementation review. The board then showed the three artifacts the checks report, with the recording found in the pull request description:
+
+```
+step       impl_review (0s in this step)
+artifacts  change=openspec/changes/add-thing  proposal_pr=https://example.test/pull/12  implementation_pr=https://example.test/pull/14  recording=https://github.com/user-attachments/assets/abc-123
+```
+
+A review that requested changes routed to `impl_revise` with the review comments as values. A second `wf next` with no new commit stayed in the revise step. A new commit sent the run back through verify, review, scope, and the implementation pull request, which entered the review again as visit 2. An approval then moved the run to the archive step, which stayed open while the change was not archived, and then while the implementation pull request was still a draft. After the archive branch was pushed with a draft archive pull request stacked on the implementation pull request, and the implementation pull request was marked ready, the run ended:
+
+```
+  [x] verify           2 of 10   passed 2s ago
+  [x] impl_review      2 of 10   passed 0s ago
+  [x] impl_revise      1 of 5    passed 2s ago
+  [x] archive          1 of 10   passed 0s ago
+
+  archive_pr     https://example.test/pull/15
+```
+
+A denied GitHub call leaves the run broken with the job text that says not to work around it, and the status line shows it needs the person:
+
+```
+A check could not run: check "proposal-pr" exited with code 3
+GitHub did not allow or could not finish 'gh pr view ...': HTTP 403: Resource not accessible by integration
+Do not work around it. If it is not something you caused, tell the person.
+openspec-change > propose (1/3) . broken . NEEDS YOU
+```
+
+What did not run for real: the headless agent was a stand-in in this scratch run, so its verdicts are scripted. The real headless agent is run in the final verification of this change, against this repository.
+
+Findings from this part. The runs board printed every line of a multi-line finding list, which broke its layout, so the board now prints the first line and `wf show` keeps the rest. A stopped run shows its stopping step as "not reached" in the step list, and the line "Stopped at" explains it, but the marker is misleading. A stopped scope check cannot be retried by a new commit, because stopped runs run no checks, so the person starts a new run.

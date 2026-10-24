@@ -5,7 +5,7 @@ load_pr
 if [ "$PR_STATE" != "OPEN" ]; then
   fail "pull request #$PR_NUMBER for $BRANCH is $PR_STATE, not open"
 fi
-if ! [[ $PR_TITLE =~ ^([A-Za-z]+(\([^\)]*\))?!?:[[:space:]]+)?Proposal ]]; then
+if ! title_starts_with "$PR_TITLE" Proposal; then
   fail "the title of pull request #$PR_NUMBER is \"$PR_TITLE\": the proposal pull request title must start with Proposal, after an optional prefix such as feat:"
 fi
 printf 'artifact: proposal_pr %s\n' "$PR_URL"

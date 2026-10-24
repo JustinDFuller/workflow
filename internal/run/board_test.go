@@ -114,6 +114,20 @@ func TestNeedsYouAndWaitingOn(t *testing.T) {
 	}
 }
 
+func TestRunsBoardShowsOnlyTheFirstLineOfAFindingList(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	h.fake.set("one", fail("the verify check failed at abc123:\n- a.go: first finding\n- b.go: second finding"))
+	h.next()
+	s := Summarize(h.state(), h.clock.now())
+	if !strings.Contains(s.Detail, "second finding") {
+		t.Fatalf("the full message is lost from the summary: %q", s.Detail)
+	}
+	text := RunsText([]RunSummary{s})
+	if !strings.Contains(text, "working on the verify check failed at abc123: ...\n") || strings.Contains(text, "first finding") {
+		t.Fatalf("the board should show one line:\n%s", text)
+	}
+}
+
 func TestShowPositionDoneAndLeft(t *testing.T) {
 	h := newHarness(t, flowYAML)
 	h.fake.set("review", pending("no review yet"))

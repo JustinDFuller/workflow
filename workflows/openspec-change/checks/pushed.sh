@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
 . "$(dirname "$0")/lib.sh"
 need git jq
+scope=openspec/changes
+new_commit=no
+for arg in "$@"; do
+  case "$arg" in
+    --all) scope=. ;;
+    --new-commit) new_commit=yes ;;
+    *) broken "pushed.sh does not understand $arg" ;;
+  esac
+done
 load_branch
 upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || upstream="origin/$BRANCH"
 remote_sha=$(git rev-parse --verify --quiet "refs/remotes/$upstream") || fail "the branch $BRANCH has not been pushed: there is no $upstream"
 head_sha=$(git rev-parse HEAD)
-dirty=$(git status --porcelain -- openspec/changes)
+dirty=$(git status --porcelain -- "$scope")
 if [ -n "$dirty" ]; then
-  fail "there are uncommitted changes under openspec/changes:
+  fail "there are uncommitted changes under $scope:
 $dirty"
 fi
 if [ "$head_sha" != "$remote_sha" ]; then
   ahead=$(git rev-list --count "$remote_sha..$head_sha" 2>/dev/null || echo "some")
   fail "the branch $BRANCH is not pushed: $ahead commit(s) are not on $upstream"
 fi
-if [ "${1:-}" = "--new-commit" ]; then
+if [ "$new_commit" = yes ]; then
   entered=$(to_epoch "${WF_STEP_ENTERED:?}")
   committed=$(git log -1 --format=%ct HEAD)
   if [ "$committed" -le "$entered" ]; then

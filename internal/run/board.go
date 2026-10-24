@@ -92,14 +92,14 @@ func RunsText(list []RunSummary) string {
 		}
 		switch s.State {
 		case StatePending:
-			fmt.Fprintf(&b, "  waiting on %s\n", s.Detail)
+			fmt.Fprintf(&b, "  waiting on %s\n", firstLine(s.Detail))
 		case StateStopped:
-			fmt.Fprintf(&b, "  stopped    %s\n", s.Detail)
+			fmt.Fprintf(&b, "  stopped    %s\n", firstLine(s.Detail))
 		case StateBroken:
-			fmt.Fprintf(&b, "  broken     %s\n", s.Detail)
+			fmt.Fprintf(&b, "  broken     %s\n", firstLine(s.Detail))
 		case StateWork:
 			if s.Detail != "" {
-				fmt.Fprintf(&b, "  working on %s\n", s.Detail)
+				fmt.Fprintf(&b, "  working on %s\n", firstLine(s.Detail))
 			}
 		}
 		if len(s.Artifacts) > 0 {

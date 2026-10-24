@@ -75,6 +75,34 @@ load_pr() {
   PR_DECISION=$(jq -r '.reviewDecision // ""' <<<"$GH_RESULT")
 }
 
+title_starts_with() {
+  [[ $1 =~ ^([A-Za-z]+(\([^\)]*\))?!?:[[:space:]]+)?$2 ]]
+}
+
+load_base_pr() {
+  gh_json pr list --head "$PR_BASE" --state all --limit 1 --json number,url,title,state,isDraft
+  BASE_PR_NUMBER=$(jq -r '.[0].number // ""' <<<"$GH_RESULT")
+  BASE_PR_URL=$(jq -r '.[0].url // ""' <<<"$GH_RESULT")
+  BASE_PR_TITLE=$(jq -r '.[0].title // ""' <<<"$GH_RESULT")
+  BASE_PR_STATE=$(jq -r '.[0].state // ""' <<<"$GH_RESULT")
+  BASE_PR_DRAFT=$(jq -r '.[0].isDraft // false' <<<"$GH_RESULT")
+}
+
+require_stack() {
+  local kind=$1 below_word=$2 below_kind=$3
+  load_default_branch
+  if [ "$PR_BASE" = "$DEFAULT_BRANCH" ]; then
+    fail "the $kind pull request #$PR_NUMBER has the default branch $DEFAULT_BRANCH as its base: it must be stacked on the $below_kind pull request"
+  fi
+  load_base_pr
+  if [ -z "$BASE_PR_NUMBER" ]; then
+    fail "the $kind pull request #$PR_NUMBER has the base $PR_BASE, which is not the branch of any pull request: it must be stacked on the $below_kind pull request"
+  fi
+  if ! title_starts_with "$BASE_PR_TITLE" "$below_word"; then
+    fail "the $kind pull request #$PR_NUMBER is stacked on #$BASE_PR_NUMBER (\"$BASE_PR_TITLE\"), which is not the $below_kind pull request: its title must start with $below_word"
+  fi
+}
+
 to_epoch() {
   jq -nr --arg t "$1" '$t | fromdateiso8601'
 }

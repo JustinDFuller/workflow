@@ -90,13 +90,13 @@
 
 ## 9. OpenSpec workflow, stage two (wf-openspec-change-workflow)
 
-- [ ] 9.1 Add the apply step and the tasks-complete check, and verify the tasks-remain scenario
-- [ ] 9.2 Add the headless verdict check with commit caching and a timeout, and verify a stub verdict maps to pass and fail and the same commit runs the agent once
-- [ ] 9.3 Add the verify, review, and scope steps marked slow, with findings reaching the job and scope failures stopping the run, and verify each scenario
-- [ ] 9.4 Add the implementation pull request step and its stacked-on-proposal check, report the implementation_pr artifact, and verify the not-stacked scenario and that the artifact shows on the board
-- [ ] 9.5 Add the implementation review step and the revise path through verify, and verify the approved and changes-requested scenarios
-- [ ] 9.6 Add the archive step and its checks, report the archive_pr artifact, and verify the archived scenario
-- [ ] 9.7 Make a denied GitHub or headless command report broken with job text telling the agent not to work around it, and verify the no-access scenario
+- [x] 9.1 Add the apply step and the tasks-complete check, and verify the tasks-remain scenario
+- [x] 9.2 Add the headless verdict check with commit caching and a timeout, and verify a stub verdict maps to pass and fail and the same commit runs the agent once
+- [x] 9.3 Add the verify, review, and scope steps marked slow, with findings reaching the job and scope failures stopping the run, and verify each scenario
+- [x] 9.4 Add the implementation pull request step and its stacked-on-proposal check, report the implementation_pr artifact, and verify the not-stacked scenario and that the artifact shows on the board
+- [x] 9.5 Add the implementation review step and the revise path through verify, and verify the approved and changes-requested scenarios
+- [x] 9.6 Add the archive step and its checks, report the archive_pr artifact, and verify the archived scenario
+- [x] 9.7 Make a denied GitHub or headless command report broken with job text telling the agent not to work around it, and verify the no-access scenario
 - [ ] 9.8 Manual proof: record the full run on a real repository from idea to the archive pull request
 
 ## 10. Acceptance

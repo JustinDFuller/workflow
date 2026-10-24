@@ -1,5 +1,5 @@
 name: openspec-change
-description: Take an idea through an OpenSpec proposal, a reviewed proposal pull request, and the invariants that must hold before implementation.
+description: Take an idea through an OpenSpec proposal, a reviewed proposal pull request, the implementation, its reviews, and the archive pull request.
 inputs:
   change:
     default: ""
@@ -39,6 +39,43 @@ checks:
   ci-still-green:
     run: '"$WF_WORKFLOW_DIR/checks/ci-still-green.sh"'
     timeout: 2m
+  committed:
+    run: '"$WF_WORKFLOW_DIR/checks/pushed.sh" --all'
+    timeout: 1m
+  committed-after-feedback:
+    run: '"$WF_WORKFLOW_DIR/checks/pushed.sh" --all --new-commit'
+    timeout: 1m
+  tasks-complete:
+    run: '"$WF_WORKFLOW_DIR/checks/tasks-complete.sh"'
+    timeout: 1m
+  verify-verdict:
+    run: '"$WF_WORKFLOW_DIR/checks/verdict.sh" verify'
+    timeout: 20m
+    cache: commit
+  review-verdict:
+    run: '"$WF_WORKFLOW_DIR/checks/verdict.sh" review'
+    timeout: 20m
+    cache: commit
+  scope-verdict:
+    run: '"$WF_WORKFLOW_DIR/checks/verdict.sh" scope'
+    timeout: 20m
+    cache: commit
+  implementation-pr:
+    run: '"$WF_WORKFLOW_DIR/checks/implementation-pr.sh"'
+    timeout: 2m
+  implementation-review:
+    run: '"$WF_WORKFLOW_DIR/checks/implementation-review.sh"'
+    timeout: 2m
+    outcomes: [approved, changes_requested, closed]
+  change-archived:
+    run: '"$WF_WORKFLOW_DIR/checks/archived.sh"'
+    timeout: 1m
+  archive-pr:
+    run: '"$WF_WORKFLOW_DIR/checks/archive-pr.sh"'
+    timeout: 2m
+  implementation-ready:
+    run: '"$WF_WORKFLOW_DIR/checks/implementation-ready.sh"'
+    timeout: 2m
 steps:
   propose:
     job: |
@@ -61,7 +98,7 @@ steps:
       closed: stop
   revise:
     job: |
-      A reviewer requested changes to the proposal pull request. The review comments are shown above under the values from the review.
+      A reviewer requested changes to the proposal pull request. The review comments are shown below under the values from the review.
       Change the OpenSpec files to address every comment, or reply on the pull request to explain why a comment does not apply.
       Commit and push the new work to the same branch, and make CI pass again.
       The pull request must stay ready for review.
@@ -72,4 +109,69 @@ steps:
   invariants:
     timeout: 10m
     checks: [branch-not-default, proposal-approved, ci-still-green]
+    then: apply
+  apply:
+    job: |
+      Implement every task in the tasks.md file of the approved change, using the OpenSpec apply skill. Build only what the approved specs describe. If a task needs more than the specs describe, stop and tell the person instead of adding it.
+      Work on a new branch made from the proposal branch, so that the approved proposal pull request does not change.
+      Mark each task done in tasks.md as you finish it. Commit and push after each round of work, and keep CI passing.
+      CI runs only on pull requests, so open a draft pull request as soon as you have pushed the first work. Its title starts with Implementation and it is stacked on the proposal pull request.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [tasks-complete, committed, ci-green]
+    then: verify
+  verify:
+    job: |
+      A headless agent compared the implementation with the approved specs, and its findings are shown below as the reason this step is not done.
+      Fix every finding in the code, the tests, or the docs, without adding anything the specs do not describe. If a finding shows that the spec itself is wrong, stop and tell the person instead of changing the spec.
+      Commit and push the fixes. The check runs again for each new commit, and it can take several minutes.
+      If a check is broken because GitHub, the headless agent, or another tool denied access, report that to the person and do not work around it.
+    checks: [committed, verify-verdict]
+    slow: true
+    then: review
+  review:
+    job: |
+      A headless agent made an adversarial review of the implementation, and its findings are shown below as the reason this step is not done.
+      Fix every finding that is real. When a finding is wrong, change the code or the tests so that the reason it is wrong is clear, and do not argue with the check.
+      Commit and push the fixes. The check runs again for each new commit, and it can take several minutes.
+      If a check is broken because GitHub, the headless agent, or another tool denied access, report that to the person and do not work around it.
+    checks: [committed, review-verdict]
+    slow: true
+    then: scope
+  scope:
+    timeout: 1h
+    checks: [scope-verdict]
+    slow: true
+    then: impl_pr
+  impl_pr:
+    job: |
+      Make the implementation pull request ready for the person to review. It is a draft pull request whose title starts with Implementation, such as "feat: Implementation for the idea", and it is stacked above the proposal pull request. Use the gh stack extension to stack it.
+      Its description follows the repository's pull request template and holds proof that the change works: a link to a recording of the real running software, and not test output.
+      Keep the branch pushed and CI passing.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [committed, implementation-pr, ci-green]
+    then: impl_review
+  impl_review:
+    checks: [implementation-review]
+    timeout: 14d
+    needs_you: true
+    on:
+      approved: archive
+      changes_requested: impl_revise
+      closed: stop
+  impl_revise:
+    job: |
+      A reviewer requested changes to the implementation pull request. The review comments are shown below under the values from the review.
+      Change the code, the tests, and the docs to address every comment, or reply on the pull request to explain why a comment does not apply. Build nothing that the approved specs do not describe.
+      Commit and push the new work to the same branch. The run then goes through verification again.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [committed-after-feedback, implementation-pr]
+    max_visits: 5
+    then: verify
+  archive:
+    job: |
+      The implementation pull request is approved. Mark it ready for review.
+      Archive the change with the OpenSpec archive skill on a new branch made from the implementation branch. Commit and push it.
+      Open a draft pull request whose title starts with Archive, such as "chore: Archive the idea", stacked above the implementation pull request. Make CI pass.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [change-archived, committed, archive-pr, implementation-ready, ci-green]
     then: end
