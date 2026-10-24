@@ -167,7 +167,7 @@ ci_state() {
 
 reviews_json() {
   gh_json api --paginate "repos/{owner}/{repo}/pulls/$1/reviews?per_page=100"
-  REVIEWS=$(jq -s 'add // []' <<<"$GH_RESULT")
+  REVIEWS=$(jq -s 'add // [] | map(select(.author_association | IN("OWNER", "MEMBER", "COLLABORATOR")))' <<<"$GH_RESULT")
 }
 
 review_comments_text() {

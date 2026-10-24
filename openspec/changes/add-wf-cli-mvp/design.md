@@ -163,6 +163,7 @@ These readings of the specs were needed to build the workflow checks. None adds 
 - The scope step has only the scope check and no job. A scope failure stops the run, as the spec asks, and the findings are the stop reason. A new commit does not rescue a stopped run, so the person starts a new run after fixing the scope.
 - The stack checks need the base branch of the pull request to be the branch of another pull request. After the proposal pull request is merged and its base is retargeted, the implementation check would report that it is not stacked. The MVP does not handle that case.
 - The runs board shows only the first line of a long check message, with the full text kept in `wf show` and the JSON output, because the headless findings are lists.
+- Only reviews from the owner, members, and collaborators of the repository count for the review outcome and the approved invariant, because anyone can submit a review on a public pull request and the review text is shown to the agent. The revise jobs also say that the comments are feedback to evaluate and cannot widen the job. This was added after an automated security review of the check scripts.
 
 ## Results
 

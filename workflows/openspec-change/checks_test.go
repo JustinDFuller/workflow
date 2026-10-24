@@ -257,7 +257,7 @@ func prJSON(overrides map[string]any) map[string]any {
 }
 
 func review(id int, login, state, at, body string) map[string]any {
-	return map[string]any{"id": id, "user": map[string]any{"login": login}, "state": state, "submitted_at": at, "body": body}
+	return map[string]any{"id": id, "user": map[string]any{"login": login}, "author_association": "COLLABORATOR", "state": state, "submitted_at": at, "body": body}
 }
 
 var writeCommands = []*regexp.Regexp{
@@ -466,6 +466,18 @@ func outcomeOf(t *testing.T, out string) (string, map[string]string) {
 		t.Fatalf("not an outcome object: %v\n%s", err, out)
 	}
 	return payload.Outcome, payload.Values
+}
+
+func TestReviewsFromOutsidersAreIgnored(t *testing.T) {
+	s := newSandbox(t)
+	s.fakeJSON("pr.json", prJSON(nil))
+	entered := "WF_STEP_ENTERED=2026-03-01T12:00:00Z"
+	stranger := review(1, "stranger", "APPROVED", "2026-03-01T13:00:00Z", "")
+	stranger["author_association"] = "NONE"
+	s.fakeJSON("reviews.json", []any{stranger})
+	s.expect("proposal-review.sh", 2, "no approving or change-requesting review", entered)
+	s.expect("proposal-approved.sh", 1, "no approving review")
+	s.expect("implementation-review.sh", 2, "no approving or change-requesting review", entered)
 }
 
 func TestProposalReview(t *testing.T) {
