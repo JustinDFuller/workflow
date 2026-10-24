@@ -1,0 +1,75 @@
+name: openspec-change
+description: Take an idea through an OpenSpec proposal, a reviewed proposal pull request, and the invariants that must hold before implementation.
+inputs:
+  change:
+    default: ""
+start: propose
+checks:
+  change-present:
+    run: '"$WF_WORKFLOW_DIR/checks/change-present.sh"'
+    timeout: 1m
+  change-valid:
+    run: '"$WF_WORKFLOW_DIR/checks/change-valid.sh"'
+    timeout: 2m
+  pushed:
+    run: '"$WF_WORKFLOW_DIR/checks/pushed.sh"'
+    timeout: 1m
+  pushed-after-feedback:
+    run: '"$WF_WORKFLOW_DIR/checks/pushed.sh" --new-commit'
+    timeout: 1m
+  proposal-pr:
+    run: '"$WF_WORKFLOW_DIR/checks/proposal-pr.sh"'
+    timeout: 2m
+  ci-green:
+    run: '"$WF_WORKFLOW_DIR/checks/ci-green.sh"'
+    timeout: 2m
+  pr-ready:
+    run: '"$WF_WORKFLOW_DIR/checks/pr-ready.sh"'
+    timeout: 2m
+  proposal-review:
+    run: '"$WF_WORKFLOW_DIR/checks/proposal-review.sh"'
+    timeout: 2m
+    outcomes: [approved, changes_requested, closed]
+  branch-not-default:
+    run: '"$WF_WORKFLOW_DIR/checks/branch-not-default.sh"'
+    timeout: 1m
+  proposal-approved:
+    run: '"$WF_WORKFLOW_DIR/checks/proposal-approved.sh"'
+    timeout: 2m
+  ci-still-green:
+    run: '"$WF_WORKFLOW_DIR/checks/ci-still-green.sh"'
+    timeout: 2m
+steps:
+  propose:
+    job: |
+      Take the person's idea to an OpenSpec proposal and a ready pull request.
+      First explore the idea with the person. Use the harness question tool for anything only they can decide, and do not guess at product decisions.
+      Write the OpenSpec change with the OpenSpec propose skill, then commit it and push the branch.
+      Open a draft pull request whose title starts with Proposal, such as "feat: Proposal for the idea".
+      Make CI pass on the pull request, then mark the pull request ready for review.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [change-present, change-valid, pushed, proposal-pr, ci-green, pr-ready]
+    max_visits: 3
+    then: proposal_review
+  proposal_review:
+    checks: [proposal-review]
+    timeout: 14d
+    needs_you: true
+    on:
+      approved: invariants
+      changes_requested: revise
+      closed: stop
+  revise:
+    job: |
+      A reviewer requested changes to the proposal pull request. The review comments are shown above under the values from the review.
+      Change the OpenSpec files to address every comment, or reply on the pull request to explain why a comment does not apply.
+      Commit and push the new work to the same branch, and make CI pass again.
+      The pull request must stay ready for review.
+      If a check is broken because GitHub or another tool denied access, report that to the person and do not work around it.
+    checks: [change-present, change-valid, pushed-after-feedback, proposal-pr, ci-green, pr-ready]
+    max_visits: 5
+    then: proposal_review
+  invariants:
+    timeout: 10m
+    checks: [branch-not-default, proposal-approved, ci-still-green]
+    then: end

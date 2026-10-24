@@ -80,12 +80,12 @@
 
 ## 8. OpenSpec workflow, stage one (wf-openspec-change-workflow)
 
-- [ ] 8.1 Write the workflow file with the propose, proposal review, revise, and invariants steps, and verify it validates
-- [ ] 8.2 Write the change-present, change-valid, and pushed check scripts, and verify each against a scratch repository for both pass and fail
-- [ ] 8.3 Write the proposal-pull-request, CI, and ready check scripts over `gh`, make the change-present and pull-request checks report the change and proposal_pr artifacts, and verify each against a real draft pull request including the pending case and that both artifacts show on the board
-- [ ] 8.4 Write the proposal review check with the entered-at baseline and the three outcomes and comment values, and verify approved, old review ignored, changes requested, and closed against a real pull request
-- [ ] 8.5 Write the invariants check scripts and verify the hold and fail scenarios
-- [ ] 8.6 Verify every check script only reads, by reviewing each for commands that write
+- [x] 8.1 Write the workflow file with the propose, proposal review, revise, and invariants steps, and verify it validates
+- [x] 8.2 Write the change-present, change-valid, and pushed check scripts, and verify each against a scratch repository for both pass and fail
+- [x] 8.3 Write the proposal-pull-request, CI, and ready check scripts over `gh`, make the change-present and pull-request checks report the change and proposal_pr artifacts, and verify each against a real draft pull request including the pending case and that both artifacts show on the board
+- [x] 8.4 Write the proposal review check with the entered-at baseline and the three outcomes and comment values, and verify approved, old review ignored, changes requested, and closed against a real pull request
+- [x] 8.5 Write the invariants check scripts and verify the hold and fail scenarios
+- [x] 8.6 Verify every check script only reads, by reviewing each for commands that write
 - [ ] 8.7 Manual proof: record a real Claude Code session that takes an idea through exploration with the person, a proposal pull request, a real review, and the invariants, driven only by `wf next` and `wf wait`
 
 ## 9. OpenSpec workflow, stage two (wf-openspec-change-workflow)

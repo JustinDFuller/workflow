@@ -144,3 +144,14 @@ The spike ran against a throwaway bash stub of `wf` and a headless Claude Code (
 - Exit of a background shell wakes the agent. The task-completion notification started a new model turn in the headless session with no other input, and the exit code (13 for an ended run) was visible to the agent. A headless session stays alive while a background task runs.
 
 What changed in the design because of the spike. The pending text already carries the wait command with the time left on the step. It now also tells the agent to set the Bash tool timeout to the wait time plus one minute, because without it a long wait dies at ten minutes and the stop hook then blocks the stop until the agent starts another wait. The heartbeat file is what lets the stop hook tell those two cases apart: a wait that was killed stops beating, so the next stop is blocked with an instruction to start the wait again, and a wait that is alive lets the agent stop.
+
+## Clarifications made while implementing
+
+These readings of the specs were needed to build the workflow checks. None adds behavior. Each is listed so the reviewer can object.
+
+- The check scripts live in a `checks/` subdirectory beside the workflow file, and the workflow file runs them through `$WF_WORKFLOW_DIR`. The spec says "beside it" and the directory keeps the workflow directory readable.
+- The revise step uses a variant of the pushed check that also requires the latest commit to be newer than the moment the step was entered. Without it the revise step would pass at once, because the branch is already pushed when the review asks for changes.
+- A pull request that was merged counts as approved for the review outcome, because merging requires the review that the run was waiting for. A pull request closed without merging is the closed outcome.
+- Only the latest approving or change-requesting review submitted after the step was entered decides the outcome, so a later approval wins over an earlier request for changes and the reverse.
+- With no change argument the checks find the change from the files that differ from the default branch. When more than one change differs, the check fails and says to start the run with `--input change=<name>`.
+- A failing step with no job stops the run with the failing check's message. The closed outcome routes to stop, so the stop reason names the step and not the closed pull request.

@@ -274,3 +274,37 @@ Limit of this proof: Claude Code draws the status line only in an interactive se
 ## Findings
 
 - The security review of the install command noted that the permission `Bash(wf:*)` lets the agent run `wf start` and `wf next` without a prompt, and those run the check commands in the workflow file. The specification requires this permission, so the install writes it. The workflow file is a trusted input that the person chooses, and an agent that can write a new workflow file and start it could run commands through it. Narrowing the permission is a decision for the person and is listed as a follow-up.
+
+## Stage one of the OpenSpec workflow
+
+The workflow file `workflows/openspec-change/workflow.yaml` validates, and its eleven check scripts live in `workflows/openspec-change/checks/`. Each script was run three ways: through Go tests against a scratch git repository with a stand-in `gh`, against the real pull requests of this repository read-only, and through `wf` in a scratch repository with the stand-in `gh`.
+
+What ran against real pull requests of this repository: the change-present, change-valid, pushed, proposal pull request, CI, ready, and review checks against the approved proposal pull request, and the title, draft, and CI checks against the draft implementation pull request. The proposal review reported `approved` for the real approval when the baseline was older than it, and was pending for a baseline in the future. The CI check named the failing prose check on a real red commit.
+
+What could not run against a real pull request: a request for changes, a closed pull request, and a denied GitHub call. The agent account cannot review its own pull request, and closing the person's pull requests to test would be a side effect. Those three paths ran against the stand-in `gh`, which serves the same JSON shapes that the real commands returned.
+
+A run in a scratch repository, driven only by `wf next` with the stand-in `gh`, showed these moves in order. The change is written but not pushed, then pushed with no pull request, then a draft with the wrong title, then CI running (pending, naming the running check), then green but still a draft, then ready (the run enters `proposal_review` and the board lists `change` and `proposal_pr`). After a request for changes the run enters `revise` and shows the comments, stays there until a newer commit is pushed, goes back to `proposal_review` once CI is green, and ends through `invariants` after an approval.
+
+```
+  [x] propose          1 of 3    passed 18s ago
+  [x] proposal_review  2 of 10   passed 3s ago
+  [x] revise           1 of 5    passed 3s ago
+  [x] invariants       1 of 10   passed 2s ago
+
+Artifacts
+  change         openspec/changes/add-thing
+  proposal_pr    https://example.test/pull/12
+```
+
+The failure paths, also through `wf next`:
+
+```
+Reason: Invariant failed, CI must be green: CI is failing at 76b86e3: go
+Reason: step "proposal_review" routed the run to stop
+A check could not run: check "proposal-review" exited with code 3
+GitHub did not allow or could not finish 'gh pr view ...': HTTP 403: Resource not accessible by integration
+```
+
+The first is a CI that turned red after the approval and stopped the run at `invariants`. The second is a pull request closed without merging. The third and fourth are a denied GitHub call, which leaves the run in the broken state with the status line `openspec-change > proposal_review (1/10) . broken . NEEDS YOU`.
+
+Findings from this part. The closed outcome stops the run, but the stop reason names the step and not the closed pull request, because the engine writes that reason. A reviewer who wants the cause in the stop message needs a spec change to routing. Also, `wf statusline` waits for its input to close, so it must be run with its input closed when tried by hand.
