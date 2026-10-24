@@ -209,7 +209,8 @@ Deadline: 13d23h59m57s left
 Checks
   pending      reviewed: no review submitted yet
 
-Artifacts```
+Artifacts
+```
 
 ## Hooks in a real Claude Code session (task 7.8)
 
