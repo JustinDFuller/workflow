@@ -15,8 +15,8 @@ func wf(args ...string) (int, string, string) {
 }
 
 func TestUsageAndUnknown(t *testing.T) {
-	code, out, _ := wf()
-	if code != 0 || !strings.Contains(out, "Usage:") {
+	code, out, _ := wf("help")
+	if code != 0 || !strings.Contains(out, "Usage:") || !strings.Contains(out, "wf runs") {
 		t.Fatalf("usage: %d %q", code, out)
 	}
 	code, _, errOut := wf("nope")

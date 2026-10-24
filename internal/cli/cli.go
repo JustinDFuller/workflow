@@ -29,6 +29,10 @@ Commands:
   start <file> [--input k=v]   start a run in this worktree
   next [--json] [--run id]     evaluate the current step and say what to do
   wait [--timeout d] [--json]  wait for a pending step to change
+  runs [--all] [--watch]       show every run that has not ended
+  show [--run id] [--watch]    show one run in detail
+
+Running wf with no command shows the same list as wf runs.
 `
 
 type Env struct {
@@ -86,6 +90,8 @@ type command struct {
 
 type options struct {
 	json     bool
+	all      bool
+	watch    bool
 	runID    string
 	timeout  duration
 	interval duration
@@ -130,6 +136,24 @@ var commands = map[string]command{
 			fs.StringVar(&o.runID, "run", "", "run id")
 		},
 		run: next,
+	},
+	"runs": {
+		setup: func(fs *flag.FlagSet, o *options) {
+			fs.BoolVar(&o.json, "json", false, "print JSON")
+			fs.BoolVar(&o.all, "all", false, "include ended runs")
+			fs.BoolVar(&o.watch, "watch", false, "redraw until interrupted")
+			fs.Var(&o.interval, "interval", "time between redraws")
+		},
+		run: runs,
+	},
+	"show": {
+		setup: func(fs *flag.FlagSet, o *options) {
+			fs.BoolVar(&o.json, "json", false, "print JSON")
+			fs.StringVar(&o.runID, "run", "", "run id")
+			fs.BoolVar(&o.watch, "watch", false, "redraw until interrupted")
+			fs.Var(&o.interval, "interval", "time between redraws")
+		},
+		run: show,
 	},
 	"wait": {
 		setup: func(fs *flag.FlagSet, o *options) {
@@ -185,6 +209,9 @@ func parse(name string, args []string, env Env) (*options, []string, error) {
 
 func Run(args []string, env Env) int {
 	if len(args) == 0 {
+		args = []string{"runs"}
+	}
+	if args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
 		fmt.Fprint(env.Stdout, usage)
 		return 0
 	}

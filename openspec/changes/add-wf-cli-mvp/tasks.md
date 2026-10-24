@@ -13,7 +13,7 @@
 - [x] 2.1 Create the Go module with one `wf` executable, and verify `go build ./...` produces a binary that prints a usage message
 - [x] 2.2 Add formatting, vet, and lint checks, and verify they pass on the skeleton
 - [x] 2.3 Add a CI check that bans code comments in Go and shell files, and verify it fails on a deliberate comment and passes without it
-- [ ] 2.4 Add a CI job that builds and tests the module, and verify it is green on a pull request
+- [x] 2.4 Add a CI job that builds and tests the module, and verify it is green on a pull request
 - [x] 2.5 Write a short contributor guide that points at the specs and the design, and verify every command in it runs as written
 
 ## 3. Workflow format (wf-workflow-format)
@@ -58,14 +58,14 @@
 
 ## 6. Board (wf-run-board)
 
-- [ ] 6.1 Implement the runs command reading every run from the log, with the ended filter and the bare-command default, and verify the several-runs and ended-hidden scenarios
-- [ ] 6.2 Implement needs-you, waiting-on, artifacts, and time in step, and verify the review, CI, and stopped scenarios
-- [ ] 6.3 Implement the live view option for both the runs and show commands, and verify a step change and a check change show on the next redraw
-- [ ] 6.4 Implement the show command with the step list marked passed, current, or not reached, visits against maximum, and how long ago each step passed, and verify the position, done-and-left, loop-count, and when-passed scenarios
-- [ ] 6.5 Implement the current step detail with the job, deadline, and each check's last result including not run yet, and verify the checks-in-order, job-visible, and no-job scenarios
-- [ ] 6.6 Implement the artifacts list and the readable newest-first history, and verify the artifact and history scenarios
-- [ ] 6.7 Verify the board takes no lock by opening it while a slow fake check holds the run, and implement the JSON option for both commands
-- [ ] 6.8 Manual proof: record the runs board with three runs in three worktrees at different steps, and `wf show --watch` on one run as it advances
+- [x] 6.1 Implement the runs command reading every run from the log, with the ended filter and the bare-command default, and verify the several-runs and ended-hidden scenarios
+- [x] 6.2 Implement needs-you, waiting-on, artifacts, and time in step, and verify the review, CI, and stopped scenarios
+- [x] 6.3 Implement the live view option for both the runs and show commands, and verify a step change and a check change show on the next redraw
+- [x] 6.4 Implement the show command with the step list marked passed, current, or not reached, visits against maximum, and how long ago each step passed, and verify the position, done-and-left, loop-count, and when-passed scenarios
+- [x] 6.5 Implement the current step detail with the job, deadline, and each check's last result including not run yet, and verify the checks-in-order, job-visible, and no-job scenarios
+- [x] 6.6 Implement the artifacts list and the readable newest-first history, and verify the artifact and history scenarios
+- [x] 6.7 Verify the board takes no lock by opening it while a slow fake check holds the run, and implement the JSON option for both commands
+- [x] 6.8 Manual proof: record the runs board with three runs in three worktrees at different steps, and `wf show --watch` on one run as it advances
 
 ## 7. Claude Code hooks (wf-harness-hooks)
 
