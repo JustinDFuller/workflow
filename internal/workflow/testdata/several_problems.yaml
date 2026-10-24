@@ -1,0 +1,20 @@
+name: demo
+start: write
+checks:
+  has-file:
+    run: test -f out.txt
+  review:
+    run: ./review.sh
+    outcomes: [approved, changes_requested]
+steps:
+  write:
+    job: Write.
+    checks: [has-file, missing]
+    then: nowhere
+  orphan:
+    job: Never reached.
+    checks: [has-file]
+    then: end
+  wait:
+    checks: [has-file]
+    then: end

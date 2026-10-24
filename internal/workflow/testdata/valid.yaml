@@ -1,0 +1,30 @@
+name: demo
+description: A small demonstration workflow.
+inputs:
+  topic:
+    required: true
+  mode:
+    default: fast
+start: write
+checks:
+  has-file:
+    run: test -f out.txt
+  review:
+    run: ./checks/review.sh
+    timeout: 30s
+    outcomes: [approved, changes_requested]
+    cache: commit
+steps:
+  write:
+    job: Write out.txt.
+    checks: [has-file]
+    then: waiting
+    max_visits: 3
+    deny_tools: [WebFetch]
+  waiting:
+    checks: [review]
+    timeout: 14d
+    needs_you: true
+    on:
+      approved: end
+      changes_requested: write
