@@ -177,11 +177,19 @@ When the state is pending, the printed next command SHALL be the wait command wi
 - **THEN** the output tells the agent to run the next command in the background
 
 ### Requirement: Changes are recorded only when they differ
-The run SHALL record a check result only when it differs from the last result recorded for the same visit of the step, so that polling for days does not grow the log.
+The run SHALL record the result of each check that runs, and only when it differs from the last result recorded for that check in the same visit of the step, so that polling for days does not grow the log and the board can show every check's last result.
 
 #### Scenario: Polling a pending review
 - **WHEN** a wait evaluates a pending check a thousand times with the same message
 - **THEN** one result event is recorded
+
+#### Scenario: Earlier checks stay visible
+- **WHEN** the third of six checks is pending and the first two passed
+- **THEN** the log holds a result for each of the first three checks and none for the others
+
+#### Scenario: New visit
+- **WHEN** the run enters a step again
+- **THEN** results from the earlier visit do not count as the last results
 
 ### Requirement: Machine-readable output
 The next and wait commands SHALL accept an option that prints the same information as JSON.

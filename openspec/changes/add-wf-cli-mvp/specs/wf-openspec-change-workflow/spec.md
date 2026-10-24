@@ -21,6 +21,21 @@ The OpenSpec change process SHALL be one workflow file with its check scripts be
 - **WHEN** every check script is read
 - **THEN** none of them commits, pushes, edits a pull request, or edits a change
 
+### Requirement: Artifacts the workflow reports
+The checks SHALL report these artifacts as soon as each exists: the change directory as change, the proposal pull request as proposal_pr, the implementation pull request as implementation_pr, the archive pull request as archive_pr, and the demonstration recording as recording.
+
+#### Scenario: Change created
+- **WHEN** the change-present check passes
+- **THEN** it reports the change directory as the artifact change
+
+#### Scenario: Pull request opened
+- **WHEN** the proposal pull request check passes
+- **THEN** it reports the pull request address as the artifact proposal_pr
+
+#### Scenario: Visible while the run is still going
+- **WHEN** the run is waiting on the proposal review
+- **THEN** the board lists change and proposal_pr
+
 ### Requirement: Propose step
 The workflow SHALL begin with a propose step whose job tells the agent to explore the idea with the person using the harness's question tool, write the OpenSpec change, commit and push it, open a draft pull request whose title starts with Proposal, make CI pass, and mark the pull request ready. Its checks SHALL run in this order: the change is present, the change is valid, the branch is pushed, the proposal pull request is open, CI is green, the pull request is ready.
 

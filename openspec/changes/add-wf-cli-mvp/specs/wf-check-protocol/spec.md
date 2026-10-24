@@ -96,11 +96,15 @@ A check that sets the commit cache SHALL have its pass, fail, and outcome result
 - **THEN** the next evaluation runs the command
 
 ### Requirement: Artifacts reported by checks
-A check MAY print lines of the form "artifact: name url" in its standard output with any result. The run SHALL record each artifact by name and show it on the board, and a later report of the same name SHALL replace the earlier one.
+A check MAY print lines of the form "artifact: name address" in its standard output with any result. The address SHALL be a URL or a path relative to the worktree. The run SHALL record each artifact by name and show it on the board, and a later report of the same name SHALL replace the earlier one.
 
 #### Scenario: Pull request found
 - **WHEN** a check passes and prints "artifact: proposal_pr https://example.test/pull/1"
 - **THEN** the run records an artifact named proposal_pr with that address
+
+#### Scenario: File in the worktree
+- **WHEN** a check prints "artifact: change openspec/changes/add-x"
+- **THEN** the run records an artifact named change with that path
 
 #### Scenario: Replaced
 - **WHEN** a later check run prints a different address for the same name

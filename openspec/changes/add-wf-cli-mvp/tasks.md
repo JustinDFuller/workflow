@@ -35,14 +35,14 @@
 - [ ] 4.5 Implement the check timeout that kills the whole process group, and verify a child process is gone after the timeout
 - [ ] 4.6 Implement the output limit with a cut marker, and verify with an oversized output
 - [ ] 4.7 Implement the commit cache keyed by commit and uncommitted changes, never caching pending or broken, and verify the four cache scenarios
-- [ ] 4.8 Implement artifact lines and their recording, and verify the recorded and replaced scenarios
+- [ ] 4.8 Implement artifact lines with URL or worktree-path addresses and their recording, and verify the pull request, file path, and replaced scenarios
 
 ## 5. Runs and the event log (wf-run)
 
 - [ ] 5.1 Implement the event types, the append-only log, state derivation, the state directory setting, and the per-run lock, and verify state is rebuilt from the log in a new process
 - [ ] 5.2 Implement the start command with worktree binding, inputs, pinning of the workflow, refusal when a run is active, and replacement of a finished run, and verify the four start scenarios
 - [ ] 5.3 Implement run lookup from any subdirectory and the run option, and verify the subdirectory and no-run scenarios
-- [ ] 5.4 Implement the next command with evaluation, recording only changes, cascading through passing steps, and the printed next command, and verify the work, pass, cascade, and never-blocks scenarios
+- [ ] 5.4 Implement the next command with evaluation, recording each check's result only when it changes in the visit, cascading through passing steps, and the printed next command, and verify the work, pass, cascade, never-blocks, polling, earlier-checks-visible, and new-visit scenarios
 - [ ] 5.5 Implement the five states and their exit codes, and verify the exit codes are distinct and none is the usage-error code
 - [ ] 5.6 Implement steps with no job so a failing check stops the run, and verify the gate scenario
 - [ ] 5.7 Implement route values passed to the destination step, and verify review comments reach the revise step
@@ -60,10 +60,12 @@
 
 - [ ] 6.1 Implement the runs command reading every run from the log, with the ended filter and the bare-command default, and verify the several-runs and ended-hidden scenarios
 - [ ] 6.2 Implement needs-you, waiting-on, artifacts, and time in step, and verify the review, CI, and stopped scenarios
-- [ ] 6.3 Implement the live view option, and verify a step change shows on the next redraw
-- [ ] 6.4 Implement the show command with the step list, marker, visits against maximum, last message, artifacts, and recent events, and verify the position and loop-count scenarios
-- [ ] 6.5 Verify the board takes no lock by opening it while a slow fake check holds the run, and implement the JSON option for both commands
-- [ ] 6.6 Manual proof: record the board with three runs in three worktrees at different steps
+- [ ] 6.3 Implement the live view option for both the runs and show commands, and verify a step change and a check change show on the next redraw
+- [ ] 6.4 Implement the show command with the step list marked passed, current, or not reached, visits against maximum, and how long ago each step passed, and verify the position, done-and-left, loop-count, and when-passed scenarios
+- [ ] 6.5 Implement the current step detail with the job, deadline, and each check's last result including not run yet, and verify the checks-in-order, job-visible, and no-job scenarios
+- [ ] 6.6 Implement the artifacts list and the readable newest-first history, and verify the artifact and history scenarios
+- [ ] 6.7 Verify the board takes no lock by opening it while a slow fake check holds the run, and implement the JSON option for both commands
+- [ ] 6.8 Manual proof: record the runs board with three runs in three worktrees at different steps, and `wf show --watch` on one run as it advances
 
 ## 7. Claude Code hooks (wf-harness-hooks)
 
@@ -80,7 +82,7 @@
 
 - [ ] 8.1 Write the workflow file with the propose, proposal review, revise, and invariants steps, and verify it validates
 - [ ] 8.2 Write the change-present, change-valid, and pushed check scripts, and verify each against a scratch repository for both pass and fail
-- [ ] 8.3 Write the proposal-pull-request, CI, and ready check scripts over `gh`, and verify each against a real draft pull request including the pending case
+- [ ] 8.3 Write the proposal-pull-request, CI, and ready check scripts over `gh`, make the change-present and pull-request checks report the change and proposal_pr artifacts, and verify each against a real draft pull request including the pending case and that both artifacts show on the board
 - [ ] 8.4 Write the proposal review check with the entered-at baseline and the three outcomes and comment values, and verify approved, old review ignored, changes requested, and closed against a real pull request
 - [ ] 8.5 Write the invariants check scripts and verify the hold and fail scenarios
 - [ ] 8.6 Verify every check script only reads, by reviewing each for commands that write
@@ -91,15 +93,15 @@
 - [ ] 9.1 Add the apply step and the tasks-complete check, and verify the tasks-remain scenario
 - [ ] 9.2 Add the headless verdict check with commit caching and a timeout, and verify a stub verdict maps to pass and fail and the same commit runs the agent once
 - [ ] 9.3 Add the verify, review, and scope steps marked slow, with findings reaching the job and scope failures stopping the run, and verify each scenario
-- [ ] 9.4 Add the implementation pull request step and its stacked-on-proposal check, and verify the not-stacked scenario
+- [ ] 9.4 Add the implementation pull request step and its stacked-on-proposal check, report the implementation_pr artifact, and verify the not-stacked scenario and that the artifact shows on the board
 - [ ] 9.5 Add the implementation review step and the revise path through verify, and verify the approved and changes-requested scenarios
-- [ ] 9.6 Add the archive step and its checks, and verify the archived scenario
+- [ ] 9.6 Add the archive step and its checks, report the archive_pr artifact, and verify the archived scenario
 - [ ] 9.7 Make a denied GitHub or headless command report broken with job text telling the agent not to work around it, and verify the no-access scenario
 - [ ] 9.8 Manual proof: record the full run on a real repository from idea to the archive pull request
 
 ## 10. Acceptance
 
-- [ ] 10.1 Assemble the recorded demonstration with every behavior listed in the specification, link it from the implementation pull request, and verify each listed behavior appears
+- [ ] 10.1 Assemble the recorded demonstration with every behavior listed in the specification, link it from the implementation pull request, report it as the recording artifact, and verify each listed behavior appears
 - [ ] 10.2 Write down what the MVP showed about the model, including what felt wrong, in the design under a results heading, as input to `establish-workflow-platform`
 
 ## Workflow follow-up
