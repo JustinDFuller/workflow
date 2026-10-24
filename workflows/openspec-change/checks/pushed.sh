@@ -24,7 +24,7 @@ if [ "$head_sha" != "$remote_sha" ]; then
   fail "the branch $BRANCH is not pushed: $ahead commit(s) are not on $upstream"
 fi
 if [ "$new_commit" = yes ]; then
-  entered=$(to_epoch "${WF_STEP_ENTERED:?}")
+  entered=$(to_epoch "${WF_STEP_ENTERED:?}") || broken "could not read the step start time $WF_STEP_ENTERED"
   committed=$(git log -1 --format=%ct HEAD)
   if [ "$committed" -le "$entered" ]; then
     fail "no new commit has been pushed since this step began at $WF_STEP_ENTERED: the latest commit is older than the review feedback"

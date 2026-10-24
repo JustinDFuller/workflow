@@ -109,7 +109,6 @@ to_epoch() {
 
 change_names() {
   local base
-  load_default_branch
   base=$(git merge-base HEAD "origin/$DEFAULT_BRANCH" 2>/dev/null || git merge-base HEAD "$DEFAULT_BRANCH" 2>/dev/null || git hash-object -t tree /dev/null)
   {
     git diff --name-only "$base" 2>/dev/null
@@ -126,6 +125,7 @@ find_change() {
   if [ -n "${WF_INPUT_CHANGE:-}" ]; then
     CHANGE_NAME=$WF_INPUT_CHANGE
   else
+    load_default_branch
     names=$(change_names)
     if [ -z "$names" ]; then
       fail "no OpenSpec change is present on this branch: nothing under openspec/changes differs from the default branch"
@@ -148,8 +148,8 @@ find_change() {
 
 ci_state() {
   local sha=$1
-  gh_json api "repos/{owner}/{repo}/commits/$sha/check-runs?per_page=100"
-  CI_RUNS=$GH_RESULT
+  gh_json api --paginate "repos/{owner}/{repo}/commits/$sha/check-runs?per_page=100"
+  CI_RUNS=$(jq -s '{check_runs: [.[].check_runs[]]}' <<<"$GH_RESULT") || broken "could not read the check runs of $sha"
   gh_json api "repos/{owner}/{repo}/commits/$sha/status"
   CI_STATUS=$GH_RESULT
   CI_SUMMARY=$(jq -n --argjson runs "$CI_RUNS" --argjson status "$CI_STATUS" '
@@ -162,7 +162,7 @@ ci_state() {
       | { name: .context,
           state: (if .state == "success" then "ok"
                   elif .state == "pending" then "running"
-                  else "bad" end) } ]')
+                  else "bad" end) } ]') || broken "could not read the CI state of $sha"
 }
 
 reviews_json() {
@@ -173,7 +173,7 @@ reviews_json() {
 review_comments_text() {
   local pr=$1 review=$2
   gh_json api --paginate "repos/{owner}/{repo}/pulls/$pr/reviews/$review/comments?per_page=100"
-  jq -rs 'add // [] | map("- " + .path + (if .line then ":" + (.line | tostring) else "" end) + ": " + .body) | join("\n")' <<<"$GH_RESULT"
+  INLINE=$(jq -rs 'add // [] | map("- " + .path + (if .line then ":" + (.line | tostring) else "" end) + ": " + .body) | join("\n")' <<<"$GH_RESULT") || broken "could not read the comments of review $review on pull request $pr"
 }
 
 outcome() {
@@ -203,7 +203,8 @@ review_outcome() {
   id=$(jq -r '.id' <<<"$decisive")
   login=$(jq -r '.user.login' <<<"$decisive")
   body=$(jq -r '.body' <<<"$decisive")
-  inline=$(review_comments_text "$PR_NUMBER" "$id")
+  review_comments_text "$PR_NUMBER" "$id"
+  inline=$INLINE
   text="Review from $login on $PR_URL:"
   if [ -n "$body" ]; then
     text="$text

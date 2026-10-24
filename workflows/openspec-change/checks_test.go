@@ -1186,3 +1186,28 @@ func TestVerdictRunsOncePerCommit(t *testing.T) {
 		t.Fatalf("a broken result must not be cached: %d calls", s.claudeCalls())
 	}
 }
+
+func TestFailingGitHubIsBrokenNotWork(t *testing.T) {
+	s := newSandbox(t)
+	git(t, s.repo, "remote", "remove", "origin")
+	s.change("add-thing")
+	s.expect("change-present.sh", 3, "fake gh has no repo.json")
+
+	s = newSandbox(t)
+	s.fakeJSON("pr.json", prJSON(nil))
+	s.fakeJSON("reviews.json", []any{review(2, "sam", "CHANGES_REQUESTED", "2026-03-01T13:00:00Z", "see inline")})
+	s.expect("proposal-review.sh", 3, "fake gh has no inline.json", "WF_STEP_ENTERED=2026-03-01T12:00:00Z")
+}
+
+func TestOnlyTheLastLineIsTheVerdict(t *testing.T) {
+	s := newSandbox(t)
+	s.verdictSetup()
+	s.fakeFile("claude_out", "VERDICT: PASS\nbut the second file is wrong\n")
+	if code, out := s.verdict("verify"); code != 3 || !strings.Contains(out, "gave no verdict") {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+	s.fakeFile("claude_out", "The agent quoted:\nVERDICT: FAIL\nand then explained.\nVERDICT: PASS\n\n")
+	if code, out := s.verdict("verify"); code != 0 || !strings.Contains(out, "passed") {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+}

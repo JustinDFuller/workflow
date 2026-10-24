@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -768,5 +769,25 @@ func TestReplayRejectsBadLogs(t *testing.T) {
 	}
 	if _, err := Replay([]Event{{Type: EventStarted, YAML: "name: [", File: "f"}}); err == nil {
 		t.Fatal("bad workflow accepted")
+	}
+}
+
+type cancellingRunner struct{ cancel func() }
+
+func (c cancellingRunner) Run(_ context.Context, _ *workflow.Check, _ check.Env) check.Result {
+	c.cancel()
+	return check.Result{Status: check.Broken, Message: "check was cancelled"}
+}
+
+func TestCancellationIsNotRecordedAsABrokenCheck(t *testing.T) {
+	h := newHarness(t, denyFlow)
+	before := len(h.events(EventCheckResult))
+	ctx, cancel := context.WithCancel(context.Background())
+	h.engine.Runner = cancellingRunner{cancel: cancel}
+	if _, err := h.engine.Evaluate(ctx, h.id); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v", err)
+	}
+	if got := len(h.events(EventCheckResult)); got != before {
+		t.Fatalf("a cancelled evaluation recorded %d check results", got-before)
 	}
 }

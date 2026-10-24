@@ -16,14 +16,19 @@ tools='Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git
 if ! output=$(WF_HOME="$scratch/home" claude -p "$prompt" --allowedTools "$tools" --setting-sources user --no-session-persistence </dev/null 2>"$scratch/stderr"); then
   broken "the headless agent could not finish the $name check: $(cat "$scratch/stderr") $output"
 fi
-verdict=$(printf '%s\n' "$output" | grep -E '^VERDICT: (PASS|FAIL)[[:space:]]*$' | tail -n 1 || true)
+trimmed=$(printf '%s\n' "$output" | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
+verdict=$(printf '%s\n' "$trimmed" | tail -n 1 | tr -d '\r')
+case "$verdict" in
+  "VERDICT: PASS" | "VERDICT: FAIL") ;;
+  *) verdict="" ;;
+esac
 if [ -z "$verdict" ]; then
   broken "the headless agent gave no verdict for the $name check: its last line must be VERDICT: PASS or VERDICT: FAIL. It said: $output"
 fi
 case "$verdict" in
   *PASS*) pass "the $name check passed at $short" ;;
 esac
-findings=$(printf '%s\n' "$output" | grep -vE '^VERDICT: (PASS|FAIL)[[:space:]]*$' | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
+findings=$(printf '%s\n' "$trimmed" | sed '$d' | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
 if [ -z "$findings" ]; then
   findings="the headless agent reported a failure and gave no findings"
 fi

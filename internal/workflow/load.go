@@ -71,10 +71,9 @@ func Load(data []byte, file, dir string) (*Workflow, error) {
 	if w.Name == "" {
 		l.add(root.Line, "workflow needs a name")
 	}
-	if len(l.problems) > 0 {
-		return w, l.problems
-	}
-	if problems := Validate(w); len(problems) > 0 {
+	problems := append(Problems{}, l.problems...)
+	problems = append(problems, Validate(w)...)
+	if len(problems) > 0 {
 		sort.SliceStable(problems, func(i, j int) bool { return problems[i].Line < problems[j].Line })
 		return w, problems
 	}

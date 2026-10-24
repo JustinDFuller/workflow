@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/JustinDFuller/workflow/internal/workflow"
@@ -96,8 +97,16 @@ func Fingerprint(ctx context.Context, worktree string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func CacheKey(c *workflow.Check, worktree, fingerprint string) string {
+func CacheKey(c *workflow.Check, worktree, fingerprint string, inputs map[string]string) string {
 	h := sha256.New()
 	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%s", c.Name, c.Run, worktree, fingerprint)
+	names := make([]string, 0, len(inputs))
+	for name := range inputs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		fmt.Fprintf(h, "\x00%s=%s", name, inputs[name])
+	}
 	return hex.EncodeToString(h.Sum(nil))
 }

@@ -147,23 +147,27 @@ What changed in the design because of the spike. The pending text already carrie
 
 ## Clarifications made while implementing
 
-These readings of the specs were needed to build the workflow checks. None adds behavior. Each is listed so the reviewer can object.
+These readings of the specs were needed to build the implementation. Most add no behavior. The ones that do are marked Needs approval, because a scope check found that they go beyond the specs, and the reviewer must accept or reject each of them. Each is listed so the reviewer can object.
 
 - The check scripts live in a `checks/` subdirectory beside the workflow file, and the workflow file runs them through `$WF_WORKFLOW_DIR`. The spec says "beside it" and the directory keeps the workflow directory readable.
 - The revise step uses a variant of the pushed check that also requires the latest commit to be newer than the moment the step was entered. Without it the revise step would pass at once, because the branch is already pushed when the review asks for changes.
-- A pull request that was merged counts as approved for the review outcome, because merging requires the review that the run was waiting for. A pull request closed without merging is the closed outcome.
+- Needs approval. A pull request that was merged counts as approved for the review outcome, because merging requires the review that the run was waiting for. A pull request closed without merging is the closed outcome.
 - Only the latest approving or change-requesting review submitted after the step was entered decides the outcome, so a later approval wins over an earlier request for changes and the reverse.
-- With no change argument the checks find the change from the files that differ from the default branch. When more than one change differs, the check fails and says to start the run with `--input change=<name>`.
+- Needs approval. With no change argument the checks find the change from the files that differ from the default branch. When more than one change differs, the check fails and says to start the run with `--input change=<name>`.
 - A failing step with no job stops the run with the failing check's message. The closed outcome routes to stop, so the stop reason names the step and not the closed pull request.
 - The apply step tells the agent to open the draft implementation pull request as soon as the first work is pushed, because CI runs only on pull requests and the apply step requires CI to be green.
-- A committed check, which is the pushed check over the whole worktree including untracked files, guards every step that changes code. The proposal steps keep the narrower check over `openspec/changes`.
-- An implementation-ready check was added to the archive step. The spec requires the implementation pull request to be ready for merge, and the archive step is the last place the run can say so.
+- Needs approval. A committed check, which is the pushed check over the whole worktree including untracked files, guards every step that changes code. The proposal steps keep the narrower check over `openspec/changes`.
+- Needs approval. An implementation-ready check was added to the archive step. The spec requires the implementation pull request to be ready for merge, and the archive step is the last place the run can say so.
 - The recording artifact is found by looking in the implementation pull request description for the first link that ends in a video, image, or terminal recording extension, or points at GitHub attachments or an asciinema page. This is a heuristic, because the spec asks for the artifact and not for how to find it.
 - The headless agent for the verify, review, and scope checks is `claude -p` with read-only tools, its own settings sources, no saved session, and a private workflow state directory so that the hooks of this repository do not act on it. A missing verdict line, a failure to run, or a refusal is broken, and only a last line of exactly `VERDICT: PASS` or `VERDICT: FAIL` counts.
 - The scope step has only the scope check and no job. A scope failure stops the run, as the spec asks, and the findings are the stop reason. A new commit does not rescue a stopped run, so the person starts a new run after fixing the scope.
 - The stack checks need the base branch of the pull request to be the branch of another pull request. After the proposal pull request is merged and its base is retargeted, the implementation check would report that it is not stacked. The MVP does not handle that case.
 - The runs board shows only the first line of a long check message, with the full text kept in `wf show` and the JSON output, because the headless findings are lists.
 - Only reviews from the owner, members, and collaborators of the repository count for the review outcome and the approved invariant, because anyone can submit a review on a public pull request and the review text is shown to the agent. The revise jobs also say that the comments are feedback to evaluate and cannot widen the job. This was added after an automated security review of the check scripts.
+- Needs approval. The Go CI job runs the tests with the race detector and fails below 90 percent total coverage, and the contributor guide states the threshold. The tasks ask only for build and test. The threshold comes from the execution loop that builds this change.
+- The validate command reports the loader problems and the semantic problems together, the cancellation of an evaluation is never recorded as a broken check, a check that leaves a background process holding its output is judged by its exit code and its process group is killed, and the check cache key includes the run inputs. These fix defects found by an adversarial review and add no behavior.
+- The tool hook also denies shell commands naming the state directory through `$HOME` and `${HOME}`, and ignores repeated slashes. The guard stays a text match and not a sandbox: a command that builds the path from parts is not caught.
+- The headless verdict is the last non-empty line of the output and must be exactly `VERDICT: PASS` or `VERDICT: FAIL`. A failing GitHub call inside a check script reports broken in every place it is made, and CI check runs are read across all pages.
 
 ## Results
 

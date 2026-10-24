@@ -371,3 +371,21 @@ func TestResolveInputs(t *testing.T) {
 		t.Fatal("unknown input accepted")
 	}
 }
+
+func TestLoaderAndSemanticProblemsAreReportedTogether(t *testing.T) {
+	problems := loadText(t, header+`steps:
+  a:
+    checks: [plain]
+    colour: red
+    then: end
+  orphan:
+    checks: [plain]
+    then: end
+`)
+	text := problemText(problems)
+	for _, want := range []string{`unknown key "colour"`, `step "orphan" cannot be reached`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("missing %q in:\n%s", want, text)
+		}
+	}
+}

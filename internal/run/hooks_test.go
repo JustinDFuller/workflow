@@ -268,8 +268,10 @@ func TestToolDeniesShellCommandsNamingStateDirectory(t *testing.T) {
 			t.Errorf("%q was allowed", command)
 		}
 	}
-	if _, deny := CheckTool(st, filepath.Join(userHome, ".wf"), ToolCall{Name: "Bash", Command: "rm -rf ~/.wf/runs"}); !deny {
-		t.Error("the tilde form was allowed")
+	for _, command := range []string{"rm -rf ~/.wf/runs", "rm -rf $HOME/.wf/runs", "rm -rf ${HOME}/.wf/runs", "rm -rf ~//.wf/runs", "rm -rf $HOME//.wf//runs"} {
+		if _, deny := CheckTool(st, filepath.Join(userHome, ".wf"), ToolCall{Name: "Bash", Command: command}); !deny {
+			t.Errorf("%q was allowed", command)
+		}
 	}
 	for _, command := range []string{"go test ./...", "wf next", "git status", ""} {
 		if reason, deny := CheckTool(st, home, ToolCall{Name: "Bash", Command: command}); deny {

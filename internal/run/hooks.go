@@ -95,13 +95,21 @@ func inside(path, dir string) bool {
 	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
+func collapseSlashes(s string) string {
+	for strings.Contains(s, "//") {
+		s = strings.ReplaceAll(s, "//", "/")
+	}
+	return s
+}
+
 func mentions(command, dir string) bool {
 	names := []string{dir, resolve(dir), "$" + HomeEnv, "${" + HomeEnv + "}"}
 	if home, err := os.UserHomeDir(); err == nil {
 		if rel, err := filepath.Rel(home, dir); err == nil && !strings.HasPrefix(rel, "..") {
-			names = append(names, "~/"+rel)
+			names = append(names, "~/"+rel, "$HOME/"+rel, "${HOME}/"+rel)
 		}
 	}
+	command = collapseSlashes(command)
 	for _, n := range names {
 		if n != "" && strings.Contains(command, n) {
 			return true

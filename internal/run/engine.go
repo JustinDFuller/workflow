@@ -131,6 +131,9 @@ func (e *Engine) evaluateStep(ctx context.Context, st *RunState) (bool, error) {
 	w := st.Workflow
 	step := st.CurrentStep()
 	res := check.EvaluateStep(ctx, w, step, e.Runner, e.env(st))
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 	for _, named := range res.Checks {
 		if err := e.recordResult(st, named); err != nil {
 			return false, err

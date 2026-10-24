@@ -84,7 +84,7 @@ func (r *Runner) Run(ctx context.Context, c *workflow.Check, env Env) Result {
 	if r.Cache != nil && c.Cache == workflow.CacheCommit {
 		fp, err := Fingerprint(ctx, env.Worktree)
 		if err == nil {
-			key = CacheKey(c, env.Worktree, fp)
+			key = CacheKey(c, env.Worktree, fp, env.Inputs)
 			if hit, ok := r.Cache.Get(key); ok {
 				return hit
 			}
@@ -119,6 +119,13 @@ func execute(ctx context.Context, c *workflow.Check, env Env) Result {
 	defer timer.Stop()
 	select {
 	case err := <-done:
+		if errors.Is(err, exec.ErrWaitDelay) {
+			killGroup(cmd)
+			err = nil
+			if !cmd.ProcessState.Success() {
+				err = &exec.ExitError{ProcessState: cmd.ProcessState}
+			}
+		}
 		return interpret(c, err, stdout.String(), stderr.String())
 	case <-timer.C:
 		killGroup(cmd)
