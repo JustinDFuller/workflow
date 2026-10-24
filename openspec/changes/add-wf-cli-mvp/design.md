@@ -133,3 +133,14 @@ Delivery order: a spike that proves the three Claude Code behaviors this design 
 - Whether the shepherd steps, merging and releasing, belong at the end of this workflow or in a separate one. The MVP stops at the archive pull request.
 - Whether Codex and Cursor support stop hooks and long background waits. The MVP proves Claude Code only.
 - Whether an Agent Session Manager view should read the log directly or through a small API. Nothing here depends on the answer.
+
+## Spike results
+
+The spike ran against a throwaway bash stub of `wf` and a headless Claude Code (`claude -p`) in a scratch project. Each behavior below was observed, not assumed.
+
+- A stop hook can block a stop. The hook returned `{"decision":"block","reason":...}`, the agent kept working and ran the stub's next command, and it stopped only after the stub reported the run ended.
+- A tool hook can deny a shell command. A `PreToolUse` hook on `Bash` that read `.tool_input.command` from stdin and returned a `deny` decision made Claude Code show "PreToolUse:Bash hook error: The workflow state cannot be touched by the agent." and the command did not run.
+- A background shell outlives the foreground limit, with one catch. Claude Code kills a background Bash command after ten minutes by default. A `wf wait --timeout 1h` was killed at exactly ten minutes. The same command started with an explicit Bash tool `timeout` of 3700000 milliseconds kept running, and a 720-second sleep started with an explicit 1800000 millisecond timeout finished after 740 seconds. So an explicit timeout is honored past ten minutes.
+- Exit of a background shell wakes the agent. The task-completion notification started a new model turn in the headless session with no other input, and the exit code (13 for an ended run) was visible to the agent. A headless session stays alive while a background task runs.
+
+What changed in the design because of the spike. The pending text already carries the wait command with the time left on the step. It now also tells the agent to set the Bash tool timeout to the wait time plus one minute, because without it a long wait dies at ten minutes and the stop hook then blocks the stop until the agent starts another wait. The heartbeat file is what lets the stop hook tell those two cases apart: a wait that was killed stops beating, so the next stop is blocked with an instruction to start the wait again, and a wait that is alive lets the agent stop.

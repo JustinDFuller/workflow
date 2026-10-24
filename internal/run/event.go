@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	EventStarted     = "started"
-	EventStepEntered = "step_entered"
-	EventCheckResult = "check_result"
-	EventStepPassed  = "step_passed"
-	EventArtifact    = "artifact"
-	EventStopped     = "stopped"
-	EventEnded       = "ended"
+	EventStarted       = "started"
+	EventStepEntered   = "step_entered"
+	EventCheckResult   = "check_result"
+	EventStepPassed    = "step_passed"
+	EventArtifact      = "artifact"
+	EventStopped       = "stopped"
+	EventEnded         = "ended"
+	EventGuardReleased = "guard_released"
 )
 
 type Event struct {

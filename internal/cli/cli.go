@@ -31,6 +31,10 @@ Commands:
   wait [--timeout d] [--json]  wait for a pending step to change
   runs [--all] [--watch]       show every run that has not ended
   show [--run id] [--watch]    show one run in detail
+  install claude               add the hooks, status line, and /wf command to this project
+  statusline                   print the one-line status for the Claude Code status line
+  hook-stop, hook-tool, hook-session
+                               hook commands that Claude Code runs; they never run checks
 
 Running wf with no command shows the same list as wf runs.
 `
@@ -155,6 +159,11 @@ var commands = map[string]command{
 		},
 		run: show,
 	},
+	"hook-stop":    {setup: func(*flag.FlagSet, *options) {}, run: hookStop},
+	"hook-tool":    {setup: func(*flag.FlagSet, *options) {}, run: hookTool},
+	"hook-session": {setup: func(*flag.FlagSet, *options) {}, run: hookSession},
+	"statusline":   {setup: func(*flag.FlagSet, *options) {}, run: statusline},
+	"install":      {setup: func(*flag.FlagSet, *options) {}, run: installClaude},
 	"wait": {
 		setup: func(fs *flag.FlagSet, o *options) {
 			fs.BoolVar(&o.json, "json", false, "print JSON")

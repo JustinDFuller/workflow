@@ -219,7 +219,7 @@ func TestNoCommandSteersARun(t *testing.T) {
 			}
 		}
 	}
-	want := []string{"next", "runs", "show", "start", "validate", "wait"}
+	want := []string{"hook-session", "hook-stop", "hook-tool", "install", "next", "runs", "show", "start", "statusline", "validate", "wait"}
 	if got := Names(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("commands %v, want %v; review each new command against the no-steering rule", got, want)
 	}

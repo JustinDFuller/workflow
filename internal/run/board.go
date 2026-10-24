@@ -227,6 +227,8 @@ func sentence(e Event) (string, bool) {
 		return "run stopped: " + e.Reason, true
 	case EventEnded:
 		return "run ended", true
+	case EventGuardReleased:
+		return e.Reason, true
 	}
 	return "", false
 }

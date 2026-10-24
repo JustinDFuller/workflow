@@ -2,11 +2,11 @@
 
 ## 1. Spike: prove the Claude Code behaviors
 
-- [ ] 1.1 Build a throwaway three-step stub of `wf next` and `wf wait` in a scratch directory, and verify it prints the state, job, and next command for a step whose check fails and then passes
-- [ ] 1.2 Prove that Claude Code can run a command in a background shell for longer than the foreground limit and be notified when it exits, and record a session where it waits at least ten minutes without further model turns
-- [ ] 1.3 Prove that a stop hook can block a stop with a reason and that the agent continues, and record a session showing the block and the continued work
-- [ ] 1.4 Prove that a tool hook can deny a shell command that names a directory, and record the denial
-- [ ] 1.5 Write down what the spike found in the design under a spike results heading, and change the design if a behavior did not hold
+- [x] 1.1 Build a throwaway three-step stub of `wf next` and `wf wait` in a scratch directory, and verify it prints the state, job, and next command for a step whose check fails and then passes
+- [x] 1.2 Prove that Claude Code can run a command in a background shell for longer than the foreground limit and be notified when it exits, and record a session where it waits at least ten minutes without further model turns
+- [x] 1.3 Prove that a stop hook can block a stop with a reason and that the agent continues, and record a session showing the block and the continued work
+- [x] 1.4 Prove that a tool hook can deny a shell command that names a directory, and record the denial
+- [x] 1.5 Write down what the spike found in the design under a spike results heading, and change the design if a behavior did not hold
 
 ## 2. Repo skeleton and guardrails
 
@@ -69,13 +69,13 @@
 
 ## 7. Claude Code hooks (wf-harness-hooks)
 
-- [ ] 7.1 Implement the shared fail-open behavior and the stop hook decision from the last recorded state, and verify the work, waiting, waiter, over, and broken scenarios
-- [ ] 7.2 Implement the stop hook progress guard and its log entry, and verify the guard and reset scenarios
-- [ ] 7.3 Implement the tool hook for denied tools, edits in the state directory, and shell commands naming it, and verify each scenario
-- [ ] 7.4 Implement the session hook for start, resume, clear, and compact, and verify the compaction and no-run scenarios
-- [ ] 7.5 Implement the status line command and verify the running and needs-you scenarios
-- [ ] 7.6 Implement the install command for Claude Code that merges hooks, status line, permission, and the start slash command into the local settings, and verify the first, second, and existing-settings scenarios
-- [ ] 7.7 Document what the hooks prevent and do not, in the install output and the contributor guide, and verify the install output states it
+- [x] 7.1 Implement the shared fail-open behavior and the stop hook decision from the last recorded state, and verify the work, waiting, waiter, over, and broken scenarios
+- [x] 7.2 Implement the stop hook progress guard and its log entry, and verify the guard and reset scenarios
+- [x] 7.3 Implement the tool hook for denied tools, edits in the state directory, and shell commands naming it, and verify each scenario
+- [x] 7.4 Implement the session hook for start, resume, clear, and compact, and verify the compaction and no-run scenarios
+- [x] 7.5 Implement the status line command and verify the running and needs-you scenarios
+- [x] 7.6 Implement the install command for Claude Code that merges hooks, status line, permission, and the start slash command into the local settings, and verify the first, second, and existing-settings scenarios
+- [x] 7.7 Document what the hooks prevent and do not, in the install output and the contributor guide, and verify the install output states it
 - [ ] 7.8 Manual proof: record a real Claude Code session where the stop hook blocks an early stop, the tool hook denies a call, and the status line changes with the step
 
 ## 8. OpenSpec workflow, stage one (wf-openspec-change-workflow)
