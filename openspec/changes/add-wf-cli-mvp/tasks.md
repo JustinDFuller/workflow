@@ -102,7 +102,7 @@
 ## 10. Acceptance
 
 - [ ] 10.1 Assemble the recorded demonstration with every behavior listed in the specification, link it from the implementation pull request, report it as the recording artifact, and verify each listed behavior appears
-- [ ] 10.2 Write down what the MVP showed about the model, including what felt wrong, in the design under a results heading, as input to `establish-workflow-platform`
+- [x] 10.2 Write down what the MVP showed about the model, including what felt wrong, in the design under a results heading, as input to `establish-workflow-platform`
 
 ## Workflow follow-up
 

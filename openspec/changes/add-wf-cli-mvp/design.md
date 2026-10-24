@@ -163,3 +163,34 @@ These readings of the specs were needed to build the workflow checks. None adds 
 - The scope step has only the scope check and no job. A scope failure stops the run, as the spec asks, and the findings are the stop reason. A new commit does not rescue a stopped run, so the person starts a new run after fixing the scope.
 - The stack checks need the base branch of the pull request to be the branch of another pull request. After the proposal pull request is merged and its base is retargeted, the implementation check would report that it is not stacked. The MVP does not handle that case.
 - The runs board shows only the first line of a long check message, with the full text kept in `wf show` and the JSON output, because the headless findings are lists.
+
+## Results
+
+This section is input to `establish-workflow-platform`. It records what building the MVP showed about the model, drawn from the spike, the scratch runs recorded in `qa.md`, and the tests. The three real-session proofs, which are tasks 8.7, 9.8, and 10.1, need a human reviewer and are not yet part of this evidence, so every claim below about the agent's behavior in a real session is limited to the headless spike.
+
+What held:
+
+- One event log as the only state was enough. The runs board, the status line, the stop hook, and the printed next command are all derived from it, and no command needed a second store.
+- Checks as scripts that print a message and exit with a code were easy to write and easy to test. The OpenSpec workflow needed no check that could not be a short script over `git`, `gh`, `jq`, and `openspec`.
+- Evaluating checks on demand, with the agent as the only driver, kept the model small. There is no daemon, no webhook, and no scheduler, and a pending check is just a command the agent runs in the background.
+- A stop hook that blocks with the next command as its reason kept the agent going in the spike, and the progress guard gave a bounded way out when a run cannot advance.
+- Caching a verdict check by commit made a slow headless review cost one run per commit and not one run per evaluation.
+
+What felt wrong:
+
+- The workflow file is only half of the definition. The jobs, the check scripts, and the verdict prompts together define the process, and a reader has to open all three to know what a step demands. The format has no place that shows them as one thing.
+- Check scripts run with the permissions of the person, and the install command allows `wf` without a prompt, so an agent that can edit a workflow file can run any command unprompted. The state directory guard stops tampering with the log, not abuse of the check command.
+- The model has no way to pass a value from one check to a later step except through routes and artifacts, so `gh` is called again for the same pull request in several checks. This is slow and noisy, and a shared per-visit fact store would remove it.
+- Outcomes exist only on the last check of a step. The review steps needed an extra step per decision point, which makes the OpenSpec workflow longer than the process it describes.
+- A stopped run cannot be rescued by new work. This is right for a failed scope check, but it means the person restarts the whole run for a problem that a one-line fix would solve, and the log of the first run is not carried into the second.
+- Long check messages, such as lists of findings, do not fit the board. The board now shows the first line, but the findings are shown to the agent in full and to the person only in `wf show`, so the person sees less than the agent.
+- Stacking and the base branch rule are tied to GitHub pull requests and to `gh stack`. The checks break when a lower pull request is merged and retargeted, which is the normal end of a stack.
+- The headless agent verdicts were exercised with a stand-in in the scratch runs. Whether the real verdicts are stable enough to gate a run is still unknown.
+
+What this suggests for the platform:
+
+- Treat a workflow as a directory with one manifest that names the file, the scripts, and the prompts, so that it can be validated, copied, and trusted as a unit.
+- Decide how a workflow earns trust before its scripts run, such as hashing the directory at install time, and stop relying on the `wf` permission alone.
+- Add a way to share facts between checks within a visit.
+- Let a stopped run be resumed from its stopping step by an explicit person action.
+- Keep the agent as the only driver until a real session shows that it fails to keep going, because nothing in the MVP evidence argues for a background runner.
