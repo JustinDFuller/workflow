@@ -372,6 +372,20 @@ func TestResolveInputs(t *testing.T) {
 	}
 }
 
+func TestSemanticProblemsAreHeldBackWhenTheShapeIsBroken(t *testing.T) {
+	problems := loadText(t, header+`steps:
+  a:
+    checks: [plain]
+    then: [broken
+`)
+	if len(problems) == 0 {
+		t.Fatal("expected problems")
+	}
+	if strings.Contains(problemText(problems), "cannot be reached") {
+		t.Fatalf("semantic noise after a loader error:\n%s", problemText(problems))
+	}
+}
+
 func TestLoaderAndSemanticProblemsAreReportedTogether(t *testing.T) {
 	problems := loadText(t, header+`steps:
   a:

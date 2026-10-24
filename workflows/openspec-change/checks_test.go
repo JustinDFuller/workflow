@@ -1211,3 +1211,40 @@ func TestOnlyTheLastLineIsTheVerdict(t *testing.T) {
 		t.Fatalf("exit %d\n%s", code, out)
 	}
 }
+
+func TestUnreadableGitHubAnswersAreBroken(t *testing.T) {
+	s := newSandbox(t)
+	s.fakeJSON("pr.json", prJSON(nil))
+	s.fakeFile("reviews.json", "not json at all")
+	s.expect("proposal-approved.sh", 3, "could not read the reviews")
+	s.expect("proposal-review.sh", 3, "could not read the reviews", "WF_STEP_ENTERED=2026-03-01T12:00:00Z")
+}
+
+func TestVerdictToleratesTrailingSpaces(t *testing.T) {
+	s := newSandbox(t)
+	s.verdictSetup()
+	s.fakeFile("claude_out", "Fine.\nVERDICT: PASS  \n")
+	if code, out := s.verdict("verify"); code != 0 {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+}
+
+func TestArchivedLookupNeedsTheExactName(t *testing.T) {
+	s := newSandbox(t)
+	s.file("openspec/changes/archive/2026-02-02-more-add-x/proposal.md", "why\n")
+	s.file("openspec/changes/archive/2026-02-03-add-x/proposal.md", "why\n")
+	s.commit("archive")
+	s.expect("change-present.sh", 1, "2 OpenSpec changes differ")
+	s.expect("change-present.sh", 0, "artifact: change openspec/changes/archive/2026-02-03-add-x", "WF_INPUT_CHANGE=add-x")
+}
+
+func TestInstalledHarnessFilesDoNotCountAsUncommitted(t *testing.T) {
+	s := newSandbox(t)
+	s.change("add-thing")
+	s.push()
+	s.file(".claude/commands/wf.md", "start\n")
+	s.file(".claude/settings.local.json", "{}\n")
+	s.expectArgs("pushed.sh", []string{"--all"}, 0, "is pushed")
+	s.file(".claude/skills/other.md", "x\n")
+	s.expectArgs("pushed.sh", []string{"--all"}, 1, "uncommitted changes")
+}

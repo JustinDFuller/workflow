@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -164,7 +165,7 @@ func TestStopHookDoesNotWaitForTheRunLock(t *testing.T) {
 	h := newHarness(t, denyFlow)
 	h.fake.set("ready", fail("not ready"))
 	h.next()
-	l, err := h.engine.Store.lockRun(h.id)
+	l, err := h.engine.Store.lockRun(context.Background(), h.id)
 	if err != nil {
 		t.Fatal(err)
 	}

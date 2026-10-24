@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -329,7 +330,7 @@ func TestShowStoppedAndOtherSentences(t *testing.T) {
 
 func TestBoardTakesNoLock(t *testing.T) {
 	h := newHarness(t, flowYAML)
-	l, err := h.engine.Store.lockRun(h.id)
+	l, err := h.engine.Store.lockRun(context.Background(), h.id)
 	if err != nil {
 		t.Fatal(err)
 	}

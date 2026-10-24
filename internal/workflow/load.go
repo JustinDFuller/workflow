@@ -13,10 +13,16 @@ import (
 type loader struct {
 	file     string
 	problems Problems
+	hard     bool
+}
+
+func (l *loader) soft(line int, format string, args ...any) {
+	l.problems = append(l.problems, Problem{File: l.file, Line: line, Message: fmt.Sprintf(format, args...)})
 }
 
 func (l *loader) add(line int, format string, args ...any) {
-	l.problems = append(l.problems, Problem{File: l.file, Line: line, Message: fmt.Sprintf(format, args...)})
+	l.hard = true
+	l.soft(line, format, args...)
 }
 
 func LoadFile(path string) (*Workflow, error) {
@@ -72,7 +78,9 @@ func Load(data []byte, file, dir string) (*Workflow, error) {
 		l.add(root.Line, "workflow needs a name")
 	}
 	problems := append(Problems{}, l.problems...)
-	problems = append(problems, Validate(w)...)
+	if !l.hard {
+		problems = append(problems, Validate(w)...)
+	}
 	if len(problems) > 0 {
 		sort.SliceStable(problems, func(i, j int) bool { return problems[i].Line < problems[j].Line })
 		return w, problems
@@ -89,12 +97,12 @@ func (l *loader) mapping(n *yaml.Node, fn func(key string, k, v *yaml.Node) bool
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		k, v := n.Content[i], n.Content[i+1]
 		if seen[k.Value] {
-			l.add(k.Line, "duplicate key %q", k.Value)
+			l.soft(k.Line, "duplicate key %q", k.Value)
 			continue
 		}
 		seen[k.Value] = true
 		if !fn(k.Value, k, v) {
-			l.add(k.Line, "unknown key %q", k.Value)
+			l.soft(k.Line, "unknown key %q", k.Value)
 		}
 	}
 }

@@ -17,7 +17,7 @@ if ! output=$(WF_HOME="$scratch/home" claude -p "$prompt" --allowedTools "$tools
   broken "the headless agent could not finish the $name check: $(cat "$scratch/stderr") $output"
 fi
 trimmed=$(printf '%s\n' "$output" | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
-verdict=$(printf '%s\n' "$trimmed" | tail -n 1 | tr -d '\r')
+verdict=$(printf '%s\n' "$trimmed" | tail -n 1 | sed -e 's/[[:space:]]*$//')
 case "$verdict" in
   "VERDICT: PASS" | "VERDICT: FAIL") ;;
   *) verdict="" ;;

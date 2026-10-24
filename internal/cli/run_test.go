@@ -158,9 +158,9 @@ func TestRunLifecycleThroughCommands(t *testing.T) {
 		t.Fatalf("by run id: %d %q", code, out)
 	}
 
-	code, _, _ = s.wf(s.repo, "start", s.flow, "--input", "topic=other")
-	if code != 0 {
-		t.Fatalf("restart after end: %d", code)
+	code, out, _ = s.wf(s.repo, "start", s.flow, "--input", "topic=other")
+	if code != 13 || !strings.Contains(out, "State: ended") {
+		t.Fatalf("restart after end: %d %q", code, out)
 	}
 }
 

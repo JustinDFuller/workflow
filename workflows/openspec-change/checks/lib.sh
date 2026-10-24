@@ -140,7 +140,7 @@ find_change() {
     CHANGE_PATH="openspec/changes/$CHANGE_NAME"
     return 0
   fi
-  CHANGE_PATH=$(ls -d openspec/changes/archive/*-"$CHANGE_NAME" 2>/dev/null | sort | tail -n 1)
+  CHANGE_PATH=$(ls -d openspec/changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$CHANGE_NAME" 2>/dev/null | sort | tail -n 1)
   if [ -z "$CHANGE_PATH" ]; then
     fail "the OpenSpec change $CHANGE_NAME has no directory under openspec/changes"
   fi
@@ -167,7 +167,7 @@ ci_state() {
 
 reviews_json() {
   gh_json api --paginate "repos/{owner}/{repo}/pulls/$1/reviews?per_page=100"
-  REVIEWS=$(jq -s 'add // [] | map(select(.author_association | IN("OWNER", "MEMBER", "COLLABORATOR")))' <<<"$GH_RESULT")
+  REVIEWS=$(jq -s 'add // [] | map(select(.author_association | IN("OWNER", "MEMBER", "COLLABORATOR")))' <<<"$GH_RESULT") || broken "could not read the reviews of pull request $1"
 }
 
 review_comments_text() {
@@ -192,7 +192,7 @@ review_outcome() {
   reviews_json "$PR_NUMBER"
   decisive=$(jq -c --arg since "$entered_at" '
     [ .[] | select((.state == "APPROVED" or .state == "CHANGES_REQUESTED") and .submitted_at > $since) ]
-    | sort_by(.submitted_at) | last // empty' <<<"$REVIEWS")
+    | sort_by(.submitted_at) | last // empty' <<<"$REVIEWS") || broken "could not read the reviews of $PR_URL"
   if [ -z "$decisive" ]; then
     pending "no approving or change-requesting review has been submitted on $PR_URL since $entered_at"
   fi

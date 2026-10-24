@@ -36,7 +36,7 @@ func (e *Engine) Start(w *workflow.Workflow, yamlData []byte, worktree string, g
 	if err != nil {
 		return "", err
 	}
-	l, err := lock(filepath.Join(e.Store.Home, "start.lock"))
+	l, err := lock(context.Background(), filepath.Join(e.Store.Home, "start.lock"))
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ type Evaluation struct {
 }
 
 func (e *Engine) Evaluate(ctx context.Context, id string) (*Evaluation, error) {
-	l, err := e.Store.lockRun(id)
+	l, err := e.Store.lockRun(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (e *Engine) advance(st *RunState, res check.StepResult) error {
 }
 
 func (e *Engine) heartbeatPath(id string) string {
-	return filepath.Join(e.Store.runDir(id), "waiter")
+	return filepath.Join(e.Store.runDir(id), fmt.Sprintf("waiter-%d", os.Getpid()))
 }
 
 func (e *Engine) beat(id string, interval time.Duration) {
@@ -230,16 +230,21 @@ func (e *Engine) beat(id string, interval time.Duration) {
 }
 
 func (e *Engine) WaiterLive(id string) bool {
-	data, err := os.ReadFile(e.heartbeatPath(id))
-	if err != nil {
-		return false
+	files, _ := filepath.Glob(filepath.Join(e.Store.runDir(id), "waiter-*"))
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		var at, interval int64
+		if _, err := fmt.Sscanf(string(data), "%d %d", &at, &interval); err != nil {
+			continue
+		}
+		if e.Store.now().Sub(time.Unix(0, at)) <= 2*time.Duration(interval) {
+			return true
+		}
 	}
-	var at, interval int64
-	if _, err := fmt.Sscanf(string(data), "%d %d", &at, &interval); err != nil {
-		return false
-	}
-	age := e.Store.now().Sub(time.Unix(0, at))
-	return age <= 2*time.Duration(interval)
+	return false
 }
 
 type WaitOptions struct {
@@ -259,7 +264,26 @@ func (e *Engine) Wait(ctx context.Context, id string, opt WaitOptions) (*Evaluat
 	if opt.Interval <= 0 {
 		opt.Interval = DefaultWaitInterval
 	}
-	defer os.Remove(e.heartbeatPath(id))
+	stopBeats := make(chan struct{})
+	beatsDone := make(chan struct{})
+	defer func() {
+		close(stopBeats)
+		<-beatsDone
+		os.Remove(e.heartbeatPath(id))
+	}()
+	go func() {
+		defer close(beatsDone)
+		ticker := time.NewTicker(opt.Interval / 2)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopBeats:
+				return
+			case <-ticker.C:
+				e.beat(id, opt.Interval)
+			}
+		}
+	}()
 	deadline := time.Now().Add(opt.Timeout)
 	var passed []string
 	for {

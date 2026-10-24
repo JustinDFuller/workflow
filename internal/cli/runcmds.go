@@ -81,8 +81,7 @@ func start(args []string, o *options, env Env) int {
 	if err != nil {
 		return env.fail(err)
 	}
-	printReport(ev, o.json, env)
-	return 0
+	return printReport(ev, o.json, env)
 }
 
 func next(args []string, o *options, env Env) int {

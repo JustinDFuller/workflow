@@ -396,6 +396,29 @@ func TestBackgroundProcessHoldingOutputDoesNotBreakTheCheck(t *testing.T) {
 	t.Fatalf("background process %d still alive", pid)
 }
 
+func TestBackgroundProcessIsReapedAfterFailingExit(t *testing.T) {
+	dir := t.TempDir()
+	pidFile := filepath.Join(dir, "child.pid")
+	c := &workflow.Check{Name: "bg", Run: `sleep 60 >/dev/null 2>&1 & echo $! > ` + pidFile + `; echo no; exit 1`}
+	got := runCheck(t, c, dir)
+	if got.Status != Fail {
+		t.Fatalf("%+v", got)
+	}
+	data, err := os.ReadFile(pidFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, _ := strconv.Atoi(strings.TrimSpace(string(data)))
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if err := exec.Command("kill", "-0", strconv.Itoa(pid)).Run(); err != nil {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("background process %d still alive", pid)
+}
+
 func TestCacheKeyIncludesInputs(t *testing.T) {
 	repo := initRepo(t)
 	r := &Runner{Cache: &Cache{Dir: t.TempDir()}}

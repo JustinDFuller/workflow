@@ -2,6 +2,7 @@ package run
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -175,7 +176,7 @@ type lockFile struct {
 	f *os.File
 }
 
-func lock(path string) (*lockFile, error) {
+func lock(ctx context.Context, path string) (*lockFile, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
@@ -183,11 +184,22 @@ func lock(path string) (*lockFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
-		return nil, err
+	for {
+		err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			return &lockFile{f: f}, nil
+		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) {
+			f.Close()
+			return nil, err
+		}
+		select {
+		case <-ctx.Done():
+			f.Close()
+			return nil, ctx.Err()
+		case <-time.After(lockPoll):
+		}
 	}
-	return &lockFile{f: f}, nil
 }
 
 func (l *lockFile) unlock() {
@@ -195,6 +207,8 @@ func (l *lockFile) unlock() {
 	l.f.Close()
 }
 
-func (s *Store) lockRun(id string) (*lockFile, error) {
-	return lock(filepath.Join(s.runDir(id), "lock"))
+const lockPoll = 25 * time.Millisecond
+
+func (s *Store) lockRun(ctx context.Context, id string) (*lockFile, error) {
+	return lock(ctx, filepath.Join(s.runDir(id), "lock"))
 }

@@ -3,6 +3,9 @@ package run
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -708,6 +711,37 @@ func TestHeartbeatLiveAndRemoved(t *testing.T) {
 	}
 	if h.engine.WaiterLive(h.id) {
 		t.Fatal("heartbeat remains after wait ended")
+	}
+}
+
+func TestTwoWaitersKeepTheirOwnHeartbeats(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	other := filepath.Join(h.engine.Store.runDir(h.id), "waiter-1")
+	if err := os.WriteFile(other, []byte(fmt.Sprintf("%d %d", h.clock.now().UnixNano(), int64(30*time.Second))), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h.engine.beat(h.id, 30*time.Second)
+	os.Remove(h.engine.heartbeatPath(h.id))
+	if !h.engine.WaiterLive(h.id) {
+		t.Fatal("removing one waiter's heartbeat hid the other waiter")
+	}
+}
+
+func TestLockGivesUpWhenCancelled(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	held, err := h.engine.Store.lockRun(context.Background(), h.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer held.unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	if _, err := h.engine.Store.lockRun(ctx, h.id); err == nil {
+		t.Fatal("expected the lock attempt to fail")
+	}
+	if time.Since(start) > 2*time.Second {
+		t.Fatal("lock attempt ignored cancellation")
 	}
 }
 

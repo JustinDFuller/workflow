@@ -119,8 +119,8 @@ func execute(ctx context.Context, c *workflow.Check, env Env) Result {
 	defer timer.Stop()
 	select {
 	case err := <-done:
+		killGroup(cmd)
 		if errors.Is(err, exec.ErrWaitDelay) {
-			killGroup(cmd)
 			err = nil
 			if !cmd.ProcessState.Success() {
 				err = &exec.ExitError{ProcessState: cmd.ProcessState}

@@ -14,7 +14,7 @@ load_branch
 upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || upstream="origin/$BRANCH"
 remote_sha=$(git rev-parse --verify --quiet "refs/remotes/$upstream") || fail "the branch $BRANCH has not been pushed: there is no $upstream"
 head_sha=$(git rev-parse HEAD)
-dirty=$(git status --porcelain -- "$scope")
+dirty=$(git status --porcelain -- "$scope" ':!.claude/commands/wf.md' ':!.claude/settings.local.json')
 if [ -n "$dirty" ]; then
   fail "there are uncommitted changes under $scope:
 $dirty"
