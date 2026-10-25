@@ -1,32 +1,11 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
-
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
-
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+context: |
+  This project is a workflow platform: a small Go engine, plugins, and clients that talk over JSON-RPC.
+  The whole platform is specified by the active change, or by openspec/specs/ once it is archived.
+  Read its design.md and the specs for any capability you touch before proposing or applying work.
+  The engine must hold no knowledge of any specific service, harness, or process. That belongs in plugins.
+  Say "Agent Session Manager" in full, never an abbreviation.
+  Write each paragraph and list item on one line, with no line breaks inside sentences.
+  Draw diagrams in plain ASCII only.
+  Put no comments in code samples or code.
