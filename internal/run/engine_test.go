@@ -806,6 +806,29 @@ func TestReplayRejectsBadLogs(t *testing.T) {
 	}
 }
 
+func TestHalfStartedRunIsIgnored(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	dir := h.engine.Store.runDir("deadbeef")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.engine.Store.append("deadbeef", Event{Type: EventStarted, Workflow: "demo", YAML: flowYAML, File: "f", Dir: dir, Worktree: dir}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.engine.Store.Load("deadbeef"); !errors.Is(err, errNoStep) {
+		t.Fatalf("err = %v", err)
+	}
+	runs, err := h.engine.Store.All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range runs {
+		if r.ID == "deadbeef" {
+			t.Fatal("half-started run listed")
+		}
+	}
+}
+
 type cancellingRunner struct{ cancel func() }
 
 func (c cancellingRunner) Run(_ context.Context, _ *workflow.Check, _ check.Env) check.Result {

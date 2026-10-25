@@ -17,6 +17,7 @@ import (
 
 var (
 	errFirstEvent = errors.New("run log does not begin with a started event")
+	errNoStep     = errors.New("run log never entered a step")
 	ErrNoRun      = errors.New("no run")
 )
 

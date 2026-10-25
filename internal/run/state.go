@@ -203,5 +203,8 @@ func Replay(events []Event) (*RunState, error) {
 	if r.Workflow == nil {
 		return nil, errFirstEvent
 	}
+	if r.CurrentStep() == nil {
+		return nil, errNoStep
+	}
 	return r, nil
 }
