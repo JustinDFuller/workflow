@@ -15,6 +15,7 @@
 - [x] 2.3 Add a CI check that bans code comments in Go and shell files, and verify it fails on a deliberate comment and passes without it
 - [x] 2.4 Add a CI job that builds and tests the module, and verify it is green on a pull request
 - [x] 2.5 Write a short contributor guide that points at the specs and the design, and verify every command in it runs as written
+- [x] 2.6 Rewrite the README to describe the wf MVP: what it is, prerequisites, install, a short tour with a small workflow that shows the check exit codes, running the OpenSpec workflow in Claude Code, watching a run, and the limits, and verify every command in it runs as written from a clean directory
 
 ## 3. Workflow format (wf-workflow-format)
 

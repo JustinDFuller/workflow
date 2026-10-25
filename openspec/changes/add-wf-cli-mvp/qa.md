@@ -368,3 +368,32 @@ openspec-change > propose (1/3) . broken . NEEDS YOU
 What did not run for real: the headless agent was a stand-in in this scratch run, so its verdicts are scripted. The real headless agent is run in the final verification of this change, against this repository.
 
 Findings from this part. The runs board printed every line of a multi-line finding list, which broke its layout, so the board now prints the first line and `wf show` keeps the rest. A stopped run showed its stopping step as "not reached" in the step list, which was misleading, so the step list now marks that step as current. A stopped scope check cannot be retried by a new commit, because stopped runs run no checks, so the person starts a new run.
+
+## README tour (task 2.6)
+
+The workflow file and the commands were extracted from the README code blocks and run line by line in a new `git init` directory, with `wf` installed by `go install ./cmd/wf` into an empty bin directory on the `PATH`. Every command ran as written. The exit codes were 0 for validate, start, runs, and show, 10 for the pending `wf next`, and 13 for the final `wf next` that reports the run ended.
+
+```
+$ wf validate hello.yaml
+hello.yaml is valid
+
+$ wf start hello.yaml
+Step: write (visit 1 of 10)
+State: work
+Not done yet: greeting.txt is missing or empty
+
+$ wf next
+Passed: write
+Step: approve (visit 1 of 10)
+State: pending
+Waiting on: waiting for approved.txt
+exit 10
+
+$ touch approved.txt
+$ wf next
+Passed: approve
+State: ended
+exit 13
+```
+
+A first attempt at the tour used checks that printed nothing when they failed, such as a bare `test -f`. The run then showed empty messages ("Not done yet: ") and a waiting step with a failing check stopped the run, because a step with no job stops on a failure. The README now says that checks print their message and that a waiting check exits 2.
