@@ -9,7 +9,7 @@ if ! title_starts_with "$PR_TITLE" Implementation; then
   fail "the title of pull request #$PR_NUMBER is \"$PR_TITLE\": the implementation pull request title must start with Implementation, after an optional prefix such as feat:"
 fi
 printf 'artifact: implementation_pr %s\n' "$PR_URL"
-gh_json pr view --json body
+gh_json pr view "$BRANCH" --json body
 recording=$(jq -r '.body // ""' <<<"$GH_RESULT" | grep -oE 'https?://[^][:space:])>"]+' | grep -iE '\.(mp4|mov|webm|gif|cast)([?#]|$)|user-attachments/assets|private-user-images|asciinema\.org/a/' | head -n 1 || true)
 if [ -n "$recording" ]; then
   printf 'artifact: recording %s\n' "$recording"

@@ -32,6 +32,9 @@ serve() {
 }
 case "$1 $2" in
   "pr view")
+    case "$3" in
+      ""|--*) echo "pr view must name the branch, or gh answers for the upstream branch" >&2; exit 2 ;;
+    esac
     if [ ! -f "$dir/pr.json" ]; then
       echo 'no pull requests found for branch "feature"' >&2
       exit 1

@@ -60,7 +60,7 @@ load_default_branch() {
 
 load_pr() {
   load_branch
-  gh_json pr view --json number,url,title,state,isDraft,baseRefName,headRefName,reviewDecision
+  gh_json pr view "$BRANCH" --json number,url,title,state,isDraft,baseRefName,headRefName,reviewDecision
   local status=$?
   if [ "$status" -eq 4 ]; then
     fail "no pull request exists for the branch $BRANCH"
