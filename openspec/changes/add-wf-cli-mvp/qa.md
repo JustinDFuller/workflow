@@ -367,4 +367,4 @@ openspec-change > propose (1/3) . broken . NEEDS YOU
 
 What did not run for real: the headless agent was a stand-in in this scratch run, so its verdicts are scripted. The real headless agent is run in the final verification of this change, against this repository.
 
-Findings from this part. The runs board printed every line of a multi-line finding list, which broke its layout, so the board now prints the first line and `wf show` keeps the rest. A stopped run shows its stopping step as "not reached" in the step list, and the line "Stopped at" explains it, but the marker is misleading. A stopped scope check cannot be retried by a new commit, because stopped runs run no checks, so the person starts a new run.
+Findings from this part. The runs board printed every line of a multi-line finding list, which broke its layout, so the board now prints the first line and `wf show` keeps the rest. A stopped run showed its stopping step as "not reached" in the step list, which was misleading, so the step list now marks that step as current. A stopped scope check cannot be retried by a new commit, because stopped runs run no checks, so the person starts a new run.
