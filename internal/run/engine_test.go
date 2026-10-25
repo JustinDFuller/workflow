@@ -727,6 +727,23 @@ func TestTwoWaitersKeepTheirOwnHeartbeats(t *testing.T) {
 	}
 }
 
+func TestWaitReturnsOnTimeWhileAnotherCommandHoldsTheRun(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	held, err := h.engine.Store.lockRun(context.Background(), h.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer held.unlock()
+	start := time.Now()
+	ev, err := h.engine.Wait(context.Background(), h.id, WaitOptions{Timeout: 200 * time.Millisecond, Interval: 50 * time.Millisecond})
+	if err != nil || ev == nil || ev.State == nil {
+		t.Fatalf("ev=%v err=%v", ev, err)
+	}
+	if time.Since(start) > 3*time.Second {
+		t.Fatal("wait outlived its timeout")
+	}
+}
+
 func TestLockGivesUpWhenCancelled(t *testing.T) {
 	h := newHarness(t, flowYAML)
 	held, err := h.engine.Store.lockRun(context.Background(), h.id)

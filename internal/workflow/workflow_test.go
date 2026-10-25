@@ -228,6 +228,20 @@ func TestDurationsAndVisits(t *testing.T) {
     then: end
     max_visits: many
 `, "max_visits must be a whole number")
+	expectProblem(t, `steps:
+  a:
+    job: x
+    checks: [plain]
+    then: end
+    max_visits: 3 times
+`, "max_visits must be a whole number")
+	expectProblem(t, `steps:
+  a:
+    job: x
+    checks: [plain]
+    then: end
+    max_visits: 2.9
+`, "max_visits must be a whole number")
 }
 
 func TestNoWayOut(t *testing.T) {

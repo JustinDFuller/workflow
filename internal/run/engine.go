@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,8 +97,19 @@ type Evaluation struct {
 }
 
 func (e *Engine) Evaluate(ctx context.Context, id string) (*Evaluation, error) {
-	l, err := e.Store.lockRun(ctx, id)
+	return e.evaluate(ctx, ctx, id)
+}
+
+func (e *Engine) evaluate(ctx, lockCtx context.Context, id string) (*Evaluation, error) {
+	l, err := e.Store.lockRun(lockCtx, id)
 	if err != nil {
+		if ctx.Err() == nil && errors.Is(err, context.DeadlineExceeded) {
+			st, lerr := e.Store.Load(id)
+			if lerr != nil {
+				return nil, lerr
+			}
+			return &Evaluation{State: st}, nil
+		}
 		return nil, err
 	}
 	defer l.unlock()
@@ -221,12 +233,15 @@ func (e *Engine) heartbeatPath(id string) string {
 
 func (e *Engine) beat(id string, interval time.Duration) {
 	path := e.heartbeatPath(id)
-	tmp := path + ".tmp"
-	data := fmt.Sprintf("%d %d\n", e.Store.now().UnixNano(), interval.Nanoseconds())
-	if err := os.WriteFile(tmp, []byte(data), 0o644); err != nil {
+	f, err := os.CreateTemp(filepath.Dir(path), "beat-*.tmp")
+	if err != nil {
 		return
 	}
-	_ = os.Rename(tmp, path)
+	_, werr := fmt.Fprintf(f, "%d %d\n", e.Store.now().UnixNano(), interval.Nanoseconds())
+	cerr := f.Close()
+	if werr != nil || cerr != nil || os.Rename(f.Name(), path) != nil {
+		os.Remove(f.Name())
+	}
 }
 
 func (e *Engine) WaiterLive(id string) bool {
@@ -285,10 +300,12 @@ func (e *Engine) Wait(ctx context.Context, id string, opt WaitOptions) (*Evaluat
 		}
 	}()
 	deadline := time.Now().Add(opt.Timeout)
+	lockCtx, cancelLock := context.WithDeadline(ctx, deadline)
+	defer cancelLock()
 	var passed []string
 	for {
 		e.beat(id, opt.Interval)
-		ev, err := e.Evaluate(ctx, id)
+		ev, err := e.evaluate(ctx, lockCtx, id)
 		if err != nil {
 			return ev, err
 		}

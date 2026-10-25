@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"go.yaml.in/yaml/v3"
@@ -234,8 +235,8 @@ func (l *loader) steps(w *Workflow, n *yaml.Node) {
 					l.add(vv.Line, "expected a whole number")
 					break
 				}
-				var n int
-				if _, err := fmt.Sscanf(vv.Value, "%d", &n); err != nil {
+				n, err := strconv.Atoi(vv.Value)
+				if err != nil {
 					l.add(vv.Line, "max_visits must be a whole number")
 					break
 				}

@@ -1238,6 +1238,17 @@ func TestArchivedLookupNeedsTheExactName(t *testing.T) {
 	s.expect("change-present.sh", 0, "artifact: change openspec/changes/archive/2026-02-03-add-x", "WF_INPUT_CHANGE=add-x")
 }
 
+func TestPushedComparesWithTheBranchNotItsUpstream(t *testing.T) {
+	s := newSandbox(t)
+	s.change("add-thing")
+	s.push()
+	git(t, s.repo, "checkout", "-q", "-b", "impl", "--track", "origin/feature")
+	s.file("code.txt", "work\n")
+	s.commit("work")
+	git(t, s.repo, "push", "-q", "origin", "impl")
+	s.expectArgs("pushed.sh", []string{"--all"}, 0, "is pushed")
+}
+
 func TestInstalledHarnessFilesDoNotCountAsUncommitted(t *testing.T) {
 	s := newSandbox(t)
 	s.change("add-thing")
