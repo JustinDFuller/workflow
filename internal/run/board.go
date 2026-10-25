@@ -163,7 +163,7 @@ func Show(st *RunState, now time.Time) Detail {
 			line.Status = "passed"
 			line.PassedAgo = int64(now.Sub(passed).Seconds())
 		}
-		if st.Lifecycle == Active && name == st.Step {
+		if (st.Lifecycle == Active || st.Lifecycle == Stopped) && name == st.Step {
 			line.Status = "current"
 		}
 		d.Steps = append(d.Steps, line)

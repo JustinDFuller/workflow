@@ -65,14 +65,17 @@ load_pr() {
   if [ "$status" -eq 4 ]; then
     fail "no pull request exists for the branch $BRANCH"
   fi
-  PR_NUMBER=$(jq -r '.number' <<<"$GH_RESULT")
-  PR_URL=$(jq -r '.url' <<<"$GH_RESULT")
-  PR_TITLE=$(jq -r '.title' <<<"$GH_RESULT")
-  PR_STATE=$(jq -r '.state' <<<"$GH_RESULT")
-  PR_DRAFT=$(jq -r '.isDraft' <<<"$GH_RESULT")
-  PR_BASE=$(jq -r '.baseRefName' <<<"$GH_RESULT")
-  PR_HEAD=$(jq -r '.headRefName' <<<"$GH_RESULT")
-  PR_DECISION=$(jq -r '.reviewDecision // ""' <<<"$GH_RESULT")
+  PR_NUMBER=$(jq -r '.number // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_URL=$(jq -r '.url // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_TITLE=$(jq -r '.title // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_STATE=$(jq -r '.state // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_DRAFT=$(jq -r 'if has("isDraft") and (.isDraft | type) == "boolean" then .isDraft else empty end' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_BASE=$(jq -r '.baseRefName // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_HEAD=$(jq -r '.headRefName // empty' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  PR_DECISION=$(jq -r '.reviewDecision // ""' <<<"$GH_RESULT") || broken "GitHub answered with something that is not JSON"
+  if [ -z "$PR_NUMBER" ] || [ -z "$PR_STATE" ] || [ -z "$PR_DRAFT" ]; then
+    broken "GitHub's answer for the pull request lacks its number, state, or draft flag"
+  fi
 }
 
 title_starts_with() {

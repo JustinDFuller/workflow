@@ -1220,6 +1220,14 @@ func TestUnreadableGitHubAnswersAreBroken(t *testing.T) {
 	s.expect("proposal-review.sh", 3, "could not read the reviews", "WF_STEP_ENTERED=2026-03-01T12:00:00Z")
 }
 
+func TestAnEmptyPullRequestAnswerIsBroken(t *testing.T) {
+	s := newSandbox(t)
+	s.fakeFile("pr.json", "")
+	s.expect("pr-ready.sh", 3, "GitHub")
+	s.fakeFile("pr.json", "{}")
+	s.expect("pr-ready.sh", 3, "lacks its number")
+}
+
 func TestVerdictToleratesTrailingSpaces(t *testing.T) {
 	s := newSandbox(t)
 	s.verdictSetup()

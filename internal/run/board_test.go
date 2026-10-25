@@ -313,6 +313,9 @@ func TestShowStoppedAndOtherSentences(t *testing.T) {
 	if !strings.Contains(text, "Stopped at gated: proposal not approved") || !strings.Contains(text, "run stopped: proposal not approved") {
 		t.Fatal(text)
 	}
+	if !strings.Contains(text, "[>] gated") {
+		t.Fatalf("the step the run stopped at is not marked:\n%s", text)
+	}
 	for _, e := range []Event{
 		{Type: EventStepPassed, Step: "a", Target: workflow.TargetStop},
 		{Type: EventCheckResult, Check: "c", Status: check.Broken, Message: "boom"},

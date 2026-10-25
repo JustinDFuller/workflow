@@ -14,7 +14,7 @@ load_branch
 upstream="origin/$BRANCH"
 remote_sha=$(git rev-parse --verify --quiet "refs/remotes/$upstream") || fail "the branch $BRANCH has not been pushed: there is no $upstream"
 head_sha=$(git rev-parse HEAD)
-dirty=$(git status --porcelain -- "$scope" ':!.claude/commands/wf.md' ':!.claude/settings.local.json')
+dirty=$(git status --porcelain -- "$scope" ':!.claude/commands/wf.md' ':!.claude/settings.local.json') || broken "git could not read the status of $scope"
 if [ -n "$dirty" ]; then
   fail "there are uncommitted changes under $scope:
 $dirty"
@@ -25,7 +25,7 @@ if [ "$head_sha" != "$remote_sha" ]; then
 fi
 if [ "$new_commit" = yes ]; then
   entered=$(to_epoch "${WF_STEP_ENTERED:?}") || broken "could not read the step start time $WF_STEP_ENTERED"
-  committed=$(git log -1 --format=%ct HEAD)
+  committed=$(git log -1 --format=%ct HEAD) || broken "git could not read the latest commit"
   if [ "$committed" -le "$entered" ]; then
     fail "no new commit has been pushed since this step began at $WF_STEP_ENTERED: the latest commit is older than the review feedback"
   fi
