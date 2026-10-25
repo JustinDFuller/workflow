@@ -16,6 +16,7 @@ The OpenSpec process lives in prose skills that the model is trusted to follow, 
 - Add hooks for Claude Code, installed by `wf install claude`: a stop hook that keeps the agent working while the workflow says there is work and lets it go idle only while a live waiter exists, a tool hook that denies tools a step does not allow, a session hook that restores the current step after compaction, and a status line.
 - Ship the OpenSpec process as the first workflow, with its checks as small scripts over `git`, `gh`, and `openspec`. Verification, adversarial review, and the scope check are checks that run a headless agent and read its verdict.
 - The agent asks the person questions with the harness's own blocking question tool. The workflow takes no part in conversation.
+- Rewrite the README to explain how to install and try `wf`: the prerequisites, the install command, a short tour with a small workflow, how to run the OpenSpec workflow in Claude Code, and how to watch a run.
 
 Nothing here replaces or edits `establish-workflow-platform`. This change is deliberately a proof of the model. What it shows feeds back into that platform.
 

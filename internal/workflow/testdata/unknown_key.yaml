@@ -1,0 +1,11 @@
+name: demo
+start: write
+checks:
+  has-file:
+    run: test -f out.txt
+steps:
+  write:
+    job: Write out.txt.
+    checks: [has-file]
+    then: end
+    colour: blue
