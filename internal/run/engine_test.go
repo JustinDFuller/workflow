@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -741,6 +742,49 @@ func TestWaitReturnsOnTimeWhileAnotherCommandHoldsTheRun(t *testing.T) {
 	}
 	if time.Since(start) > 3*time.Second {
 		t.Fatal("wait outlived its timeout")
+	}
+}
+
+type blockingRunner struct{}
+
+func (blockingRunner) Run(ctx context.Context, _ *workflow.Check, _ check.Env) check.Result {
+	<-ctx.Done()
+	return check.Result{Status: check.Broken, Message: "check was cancelled"}
+}
+
+func TestWaitCutsOffACheckThatOutlivesTheTimeout(t *testing.T) {
+	h := newHarness(t, flowYAML)
+	h.engine.Runner = blockingRunner{}
+	start := time.Now()
+	ev, err := h.engine.Wait(context.Background(), h.id, WaitOptions{Timeout: 200 * time.Millisecond, Interval: 50 * time.Millisecond})
+	if err != nil || ev == nil || ev.State == nil {
+		t.Fatalf("ev=%v err=%v", ev, err)
+	}
+	if time.Since(start) > 3*time.Second {
+		t.Fatal("wait outlived its timeout")
+	}
+	if got := len(h.events(EventCheckResult)); got != 0 {
+		t.Fatalf("a cut-off check recorded %d results", got)
+	}
+}
+
+func TestDefaultHomeIsAbsolute(t *testing.T) {
+	got, err := DefaultHome(func(string) string { return "relative/state" })
+	if err != nil || !filepath.IsAbs(got) {
+		t.Fatalf("%q %v", got, err)
+	}
+}
+
+func TestStateDirectoryGuardIgnoresCaseOnMac(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("only macOS volumes fold case")
+	}
+	dir := t.TempDir()
+	if !inside(filepath.Join(strings.ToUpper(dir), "runs", "x"), dir) {
+		t.Fatal("a differently cased path escaped the guard")
+	}
+	if !mentions("echo x > "+strings.ToUpper(dir)+"/runs/x", dir) {
+		t.Fatal("a differently cased command escaped the guard")
 	}
 }
 

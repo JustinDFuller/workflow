@@ -59,6 +59,43 @@ func hasHook(entries []any, command string) bool {
 	return false
 }
 
+func checkSettingsShape(settings map[string]any) error {
+	if settings == nil {
+		return errors.New("the settings must be a JSON object")
+	}
+	wrong := func(path, want string) error {
+		return fmt.Errorf("%s must be %s", path, want)
+	}
+	if v, ok := settings["hooks"]; ok {
+		hooks, isMap := v.(map[string]any)
+		if !isMap {
+			return wrong("hooks", "an object")
+		}
+		for event, entries := range hooks {
+			if _, isList := entries.([]any); !isList {
+				return wrong("hooks."+event, "a list")
+			}
+		}
+	}
+	if v, ok := settings["statusLine"]; ok {
+		if _, isMap := v.(map[string]any); !isMap {
+			return wrong("statusLine", "an object")
+		}
+	}
+	if v, ok := settings["permissions"]; ok {
+		perms, isMap := v.(map[string]any)
+		if !isMap {
+			return wrong("permissions", "an object")
+		}
+		if allow, ok := perms["allow"]; ok {
+			if _, isList := allow.([]any); !isList {
+				return wrong("permissions.allow", "a list")
+			}
+		}
+	}
+	return nil
+}
+
 func mergeSettings(settings map[string]any) (changes, kept []string) {
 	hooks, _ := settings["hooks"].(map[string]any)
 	if hooks == nil {
@@ -134,6 +171,9 @@ func installClaude(args []string, _ *options, env Env) int {
 		return env.fail(err)
 	}
 
+	if err := checkSettingsShape(settings); err != nil {
+		return env.fail(fmt.Errorf("%s is not usable, so nothing was changed: %v", settingsPath, err))
+	}
 	changes, kept := mergeSettings(settings)
 	if len(changes) > 0 {
 		if err := os.MkdirAll(dir, 0o755); err != nil {

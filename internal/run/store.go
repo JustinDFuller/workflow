@@ -30,7 +30,7 @@ type Store struct {
 
 func DefaultHome(getenv func(string) string) (string, error) {
 	if v := getenv(HomeEnv); v != "" {
-		return v, nil
+		return filepath.Abs(v)
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

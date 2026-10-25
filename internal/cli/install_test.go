@@ -120,6 +120,34 @@ func TestInstallKeepsUnrelatedSettings(t *testing.T) {
 	}
 }
 
+func TestInstallRefusesSettingsOfTheWrongShape(t *testing.T) {
+	for _, body := range []string{
+		"null",
+		`{"hooks":[]}`,
+		`{"hooks":{"Stop":{}}}`,
+		`{"statusLine":"x"}`,
+		`{"permissions":[]}`,
+		`{"permissions":{"allow":"Bash"}}`,
+	} {
+		s := newSandbox(t)
+		dir := filepath.Join(s.repo, ".claude")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, "settings.local.json")
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		code, _, errOut := s.wf(s.repo, "install", "claude")
+		if code != ExitUsage || !strings.Contains(errOut, "nothing was changed") {
+			t.Errorf("%s: %d %q", body, code, errOut)
+		}
+		if got, _ := os.ReadFile(path); string(got) != body {
+			t.Errorf("%s: the settings file was changed: %q", body, got)
+		}
+	}
+}
+
 func TestInstallErrors(t *testing.T) {
 	s := newSandbox(t)
 	for _, args := range [][]string{{"install"}, {"install", "codex"}, {"install", "claude", "extra"}} {

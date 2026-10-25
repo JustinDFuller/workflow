@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -87,8 +88,15 @@ func resolve(p string) string {
 	}
 }
 
+func fold(s string) string {
+	if runtime.GOOS == "darwin" {
+		return strings.ToLower(s)
+	}
+	return s
+}
+
 func inside(path, dir string) bool {
-	rel, err := filepath.Rel(resolve(dir), resolve(path))
+	rel, err := filepath.Rel(fold(resolve(dir)), fold(resolve(path)))
 	if err != nil {
 		return false
 	}
@@ -109,9 +117,9 @@ func mentions(command, dir string) bool {
 			names = append(names, "~/"+rel, "$HOME/"+rel, "${HOME}/"+rel)
 		}
 	}
-	command = collapseSlashes(command)
+	command = fold(collapseSlashes(command))
 	for _, n := range names {
-		if n != "" && strings.Contains(command, n) {
+		if n != "" && strings.Contains(command, fold(n)) {
 			return true
 		}
 	}
